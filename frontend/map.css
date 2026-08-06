@@ -1,0 +1,172 @@
+:root {
+  --bg: #0a0d10;
+  --panel: #12171c;
+  --panel-alt: #161c22;
+  --border: #232b32;
+  --text: #e8edf0;
+  --text-muted: #6b7680;
+  --accent: #39ff88;
+  --cyan: #5ec8d8;
+  --amber: #f2b134;
+  --red: #ff4757;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+.topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #0d1114ee, #0a0d10cc);
+  backdrop-filter: blur(4px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: 14px;
+}
+
+.back-link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.back-link:hover { text-decoration: underline; }
+
+.brand-sep { color: var(--border); }
+
+.brand-mark { color: var(--accent); font-size: 16px; }
+
+.link-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+#linkLabel { color: var(--accent); }
+#linkLabel.offline { color: var(--red); }
+
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.pulse-dot.offline {
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  animation: none;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+#map {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1;
+  background: var(--bg);
+}
+
+.fleet-overlay {
+  position: absolute;
+  top: 70px;
+  left: 16px;
+  z-index: 1000;
+  width: 240px;
+  background: rgba(18, 23, 28, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.fleet-overlay-header {
+  padding: 12px 14px 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.overlay-uav {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.overlay-uav:last-child { border-bottom: none; }
+.overlay-uav:hover { background: var(--panel-alt); }
+
+.overlay-uav-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.overlay-uav-meta {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.overlay-uav-meta .no-gps {
+  color: var(--amber);
+}
+
+/* Leaflet popup theming */
+.leaflet-popup-content-wrapper {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.leaflet-popup-tip { background: var(--panel); }
+.leaflet-popup-content {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.popup-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--accent);
+}
+
+.drone-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #0a0d10;
+  box-shadow: 0 0 10px var(--accent);
+}

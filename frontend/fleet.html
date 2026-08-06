@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UAV Fleet Telemetry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">◈</span>
+    <span class="brand-text">UAV FLEET TELEMETRY</span>
+  </div>
+  <div class="link-status" id="linkStatus">
+    <span class="pulse-dot" id="pulseDot"></span>
+    <span id="linkLabel">CONNECTING…</span>
+    <span class="link-sep">·</span>
+    <span id="lastUpdate">—</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="fleet-panel">
+    <div class="fleet-header">
+      <span>FLEET</span>
+      <span class="fleet-count" id="fleetCount">0</span>
+    </div>
+    <div class="fleet-list" id="fleetList">
+      <!-- UAV cards injected here -->
+    </div>
+    <div class="fleet-empty" id="fleetEmpty">
+      No UAVs registered yet.<br/>
+      Post telemetry to <code>/api/uavs/{uav_id}/telemetry</code> to add one.
+    </div>
+  </aside>
+
+  <main class="detail-panel">
+
+    <div class="no-selection" id="noSelection">
+      <div class="no-selection-glyph">▵</div>
+      <p>Select a UAV from the fleet list to view its telemetry.</p>
+    </div>
+
+    <div class="detail-content" id="detailContent" style="display:none;">
+
+      <div class="detail-heading">
+        <div>
+          <h1 id="detailName">—</h1>
+          <span class="detail-id" id="detailId">—</span>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-command" id="rtlBtn">Force Return to Base</button>
+          <button class="btn-command btn-command-hold" id="holdBtn">Force Hold Position</button>
+          <button class="btn-command btn-command-clear" id="clearCmdBtn">Clear Command</button>
+          <button class="btn-danger" id="removeBtn">Remove UAV</button>
+        </div>
+      </div>
+
+      <div class="alert-banner" id="alertBanner" style="display:none;">
+        <span class="alert-icon" id="alertIcon">⚠</span>
+        <div class="alert-text">
+          <div class="alert-title" id="alertTitle">—</div>
+          <ul class="alert-reasons" id="alertReasons"></ul>
+        </div>
+        <span class="alert-command" id="alertCommand"></span>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card" data-metric="soc">
+          <div class="stat-label">State of Charge</div>
+          <div class="stat-value"><span id="socVal">—</span><span class="stat-unit">%</span></div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="socBar"></div></div>
+        </div>
+        <div class="stat-card" data-metric="soh">
+          <div class="stat-label">State of Health</div>
+          <div class="stat-value"><span id="sohVal">—</span><span class="stat-unit">%</span></div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="sohBar"></div></div>
+        </div>
+        <div class="stat-card" data-metric="voltage">
+          <div class="stat-label">Pack Voltage</div>
+          <div class="stat-value"><span id="voltVal">—</span><span class="stat-unit">V</span></div>
+        </div>
+        <div class="stat-card" data-metric="current">
+          <div class="stat-label">Current Draw</div>
+          <div class="stat-value"><span id="currVal">—</span><span class="stat-unit">A</span></div>
+        </div>
+        <div class="stat-card" data-metric="temp">
+          <div class="stat-label">Battery Temp</div>
+          <div class="stat-value"><span id="tempVal">—</span><span class="stat-unit">°C</span></div>
+        </div>
+        <div class="stat-card" data-metric="vibration">
+          <div class="stat-label">Vibration RMS</div>
+          <div class="stat-value"><span id="vibVal">—</span><span class="stat-unit">g</span></div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">Battery Voltage &amp; SoC</div>
+          <canvas id="chartBattery"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Battery Temperature</div>
+          <canvas id="chartTemp"></canvas>
+        </div>
+        <div class="chart-card chart-wide">
+          <div class="chart-title">Vibration (X / Y / Z / RMS)</div>
+          <canvas id="chartVibration"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
