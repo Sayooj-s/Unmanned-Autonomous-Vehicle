@@ -162,6 +162,30 @@ html, body {
   color: var(--accent);
 }
 
+.leaflet-top.leaflet-right {
+  top: 70px;
+  right: 12px;
+}
+
+.leaflet-control-layers {
+  background: rgba(18, 23, 28, 0.94);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  box-shadow: none;
+}
+.leaflet-control-layers-expanded {
+  padding: 10px 12px;
+}
+.leaflet-control-layers label {
+  color: var(--text);
+}
+.leaflet-control-layers-base {
+  margin-top: 2px;
+}
+
 .drone-marker {
   width: 16px;
   height: 16px;

@@ -67,14 +67,14 @@ def flush_buffer(backend_url, uav_id):
 
 
 def check_pending_command(backend_url, uav_id):
-    """Ask the backend if it wants this drone to RTL or hold right now."""
+    """Ask the backend if it wants this drone to RTL, hold, or GOTO right now."""
     try:
         resp = requests.get(f"{backend_url}/api/uavs/{uav_id}/command", timeout=5)
         if resp.ok:
-            return resp.json().get("command", "NONE")
+            return resp.json()
     except requests.RequestException as e:
         print(f"Could not check pending command: {e}")
-    return "NONE"
+    return {"command": "NONE", "latitude": None, "longitude": None}
 
 
 def clear_command(backend_url, uav_id):
@@ -110,6 +110,26 @@ def send_hold(master):
         )
     else:
         print("LOITER mode not available on this flight controller/firmware.")
+
+
+def send_goto(master, lat, lon):
+    """Command the flight controller to fly to a destination lat/lon."""
+    print(f">>> COMMANDING GOTO {lat}, {lon} <<<")
+    master.mav.command_int_send(
+        master.target_system,
+        master.target_component,
+        mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+        mavutil.mavlink.MAV_CMD_DO_REPOSITION,
+        0,
+        0,
+        -1,  # default ground speed
+        1,   # change to loiter at the destination
+        0,
+        0,
+        int(lat * 1e7),
+        int(lon * 1e7),
+        float("nan"),
+    )
 
 
 def estimate_soh(voltage, current, cycle_count=0):
@@ -220,12 +240,16 @@ def main():
         # Also separately poll for a manually-issued command (e.g. operator
         # pressed "Force Return to Base" on the dashboard) -- independent of
         # whether a new telemetry reading was just sent.
-        cmd = check_pending_command(args.backend_url, args.uav_id)
+        pending = check_pending_command(args.backend_url, args.uav_id)
+        cmd = pending.get("command", "NONE")
         if cmd == "RTL":
             send_rtl(master)
             clear_command(args.backend_url, args.uav_id)
         elif cmd == "HOLD":
             send_hold(master)
+            clear_command(args.backend_url, args.uav_id)
+        elif cmd == "GOTO" and pending.get("latitude") is not None and pending.get("longitude") is not None:
+            send_goto(master, pending["latitude"], pending["longitude"])
             clear_command(args.backend_url, args.uav_id)
 
 

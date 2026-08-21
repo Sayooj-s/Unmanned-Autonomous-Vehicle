@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UAV Command &amp; Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ops.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <a href="index.html" class="back-link">← Home</a>
+    <span class="brand-sep">/</span>
+    <span class="brand-mark">⬡</span>
+    <span class="brand-text">COMMAND &amp; INVENTORY</span>
+  </div>
+  <div class="link-status" id="linkStatus">
+    <span class="pulse-dot" id="pulseDot"></span>
+    <span id="linkLabel">CONNECTING…</span>
+  </div>
+</header>
+
+<main class="ops-layout">
+
+  <section class="ops-panel">
+    <div class="panel-head">
+      <h2>Commanding</h2>
+      <p>Issue a flight command with destination coordinates. Battery is read from the latest telemetry.</p>
+    </div>
+
+    <div class="form-grid">
+      <label>
+        UAV
+        <select id="uavSelect">
+          <option value="">Select a UAV…</option>
+        </select>
+      </label>
+      <label>
+        Current battery
+        <div class="battery-readout" id="batteryReadout">—</div>
+      </label>
+      <label>
+        Command
+        <select id="commandSelect">
+          <option value="GOTO">GOTO destination</option>
+          <option value="RTL">Return to launch</option>
+          <option value="HOLD">Hold / loiter</option>
+          <option value="NONE">Clear command</option>
+        </select>
+      </label>
+      <label>
+        Destination latitude
+        <input id="latInput" type="number" step="0.000001" min="-90" max="90" placeholder="e.g. 9.931233" />
+      </label>
+      <label>
+        Destination longitude
+        <input id="lonInput" type="number" step="0.000001" min="-180" max="180" placeholder="e.g. 76.267304" />
+      </label>
+    </div>
+
+    <div class="pending-row" id="pendingRow">No pending command.</div>
+    <button class="btn-primary" id="sendCmdBtn">Send command</button>
+  </section>
+
+  <section class="ops-panel">
+    <div class="panel-head">
+      <h2>Inventory</h2>
+      <p>Type a component model. Matching parts are looked up from Wikipedia (with images) so you can insert them into the list.</p>
+    </div>
+
+    <label class="lookup-label">
+      Component model
+      <input id="modelInput" type="text" placeholder="e.g. T-Motor MN3110, Holybro Pixhawk 6C, DJI O3 Air Unit" autocomplete="off" />
+    </label>
+    <div class="lookup-status" id="lookupStatus"></div>
+    <div class="lookup-results" id="lookupResults"></div>
+
+    <div class="inventory-head">Stored components</div>
+    <div class="inventory-list" id="inventoryList"></div>
+  </section>
+
+</main>
+
+<script src="ops.js"></script>
+</body>
+</html>

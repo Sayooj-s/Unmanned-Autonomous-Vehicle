@@ -12,15 +12,18 @@ Run locally:
 Then open http://localhost:8000 for the dashboard.
 """
 
+import json
 import os
+import urllib.parse
+import urllib.request
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -59,8 +62,22 @@ class UAV(Base):
     # computer (e.g. Jetson) polls GET /api/uavs/{uav_id}/command and acts on
     # this, then the backend clears it back to "NONE" once issued.
     pending_command = Column(String, default="NONE")
+    command_lat = Column(Float, nullable=True)
+    command_lon = Column(Float, nullable=True)
 
     telemetry = relationship("Telemetry", back_populates="uav", cascade="all, delete-orphan")
+
+
+class InventoryItem(Base):
+    __tablename__ = "inventory"
+    id = Column(Integer, primary_key=True, index=True)
+    model = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    image_url = Column(String, nullable=True)
+    source_url = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Telemetry(Base):
@@ -146,6 +163,21 @@ def evaluate_alert(latest: "Telemetry | None") -> dict:
 Base.metadata.create_all(bind=engine)
 
 
+def _ensure_column(table: str, column: str, ddl: str):
+    """Add a column to an existing SQLite/Postgres table if it is missing."""
+    inspector = inspect(engine)
+    if table not in inspector.get_table_names():
+        return
+    existing = {c["name"] for c in inspector.get_columns(table)}
+    if column not in existing:
+        with engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+
+
+_ensure_column("uavs", "command_lat", "command_lat FLOAT")
+_ensure_column("uavs", "command_lon", "command_lon FLOAT")
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -179,8 +211,22 @@ class UAVRegister(BaseModel):
     model: Optional[str] = None
 
 
+ALLOWED_COMMANDS = ("NONE", "RTL", "HOLD", "GOTO")
+
+
 class CommandIn(BaseModel):
-    command: str  # "NONE", "RTL", or "HOLD"
+    command: str  # "NONE", "RTL", "HOLD", or "GOTO"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+class InventoryIn(BaseModel):
+    model: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    source_url: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class TelemetryIn(BaseModel):
@@ -225,7 +271,140 @@ def serialize_uav(u: UAV) -> dict:
         "model": u.model,
         "registered_at": u.registered_at.isoformat() if u.registered_at else None,
         "pending_command": u.pending_command or "NONE",
+        "command_lat": u.command_lat,
+        "command_lon": u.command_lon,
     }
+
+
+def serialize_inventory(item: InventoryItem) -> dict:
+    return {
+        "id": item.id,
+        "model": item.model,
+        "title": item.title,
+        "description": item.description,
+        "image_url": item.image_url,
+        "source_url": item.source_url,
+        "notes": item.notes,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+WIKI_UA = "UAVGroundControl/1.0 (fleet-inventory-lookup)"
+
+
+def _http_get_json(url: str, timeout: float = 8.0) -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": WIKI_UA, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def lookup_component(query: str) -> list:
+    """Search Wikipedia (and Openverse for images) for a component model."""
+    q = query.strip()
+    if not q:
+        return []
+
+    results = []
+    seen_titles = set()
+
+    wiki_params = urllib.parse.urlencode({
+        "action": "query",
+        "generator": "search",
+        "gsrsearch": q,
+        "gsrlimit": 8,
+        "prop": "pageimages|extracts|info",
+        "inprop": "url",
+        "pithumbsize": 480,
+        "exintro": 1,
+        "explaintext": 1,
+        "exchars": 420,
+        "format": "json",
+        "origin": "*",
+    })
+    try:
+        wiki = _http_get_json(f"https://en.wikipedia.org/w/api.php?{wiki_params}")
+        pages = (wiki.get("query") or {}).get("pages") or {}
+        for page in pages.values():
+            title = page.get("title") or ""
+            if not title or title in seen_titles:
+                continue
+            seen_titles.add(title)
+            thumb = (page.get("thumbnail") or {}).get("source")
+            extract = (page.get("extract") or "").strip()
+            results.append({
+                "title": title,
+                "description": extract or None,
+                "image_url": thumb,
+                "source_url": page.get("fullurl") or f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}",
+                "source": "wikipedia",
+            })
+    except Exception:
+        pass
+
+    if not results:
+        wiki_params = urllib.parse.urlencode({
+            "action": "query",
+            "generator": "search",
+            "gsrsearch": f"{q} drone",
+            "gsrlimit": 6,
+            "prop": "pageimages|extracts|info",
+            "inprop": "url",
+            "pithumbsize": 480,
+            "exintro": 1,
+            "explaintext": 1,
+            "exchars": 420,
+            "format": "json",
+        })
+        try:
+            wiki = _http_get_json(f"https://en.wikipedia.org/w/api.php?{wiki_params}")
+            pages = (wiki.get("query") or {}).get("pages") or {}
+            for page in pages.values():
+                title = page.get("title") or ""
+                if not title or title in seen_titles:
+                    continue
+                seen_titles.add(title)
+                thumb = (page.get("thumbnail") or {}).get("source")
+                extract = (page.get("extract") or "").strip()
+                results.append({
+                    "title": title,
+                    "description": extract or None,
+                    "image_url": thumb,
+                    "source_url": page.get("fullurl") or f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}",
+                    "source": "wikipedia",
+                })
+        except Exception:
+            pass
+
+    ov_params = urllib.parse.urlencode({
+        "q": q,
+        "page_size": 8,
+        "mature": "false",
+    })
+    try:
+        ov = _http_get_json(f"https://api.openverse.org/v1/images/?{ov_params}")
+        extra_images = []
+        for hit in ov.get("results") or []:
+            url = hit.get("thumbnail") or hit.get("url")
+            if not url:
+                continue
+            extra_images.append({
+                "title": hit.get("title") or q,
+                "description": f"Image match for {q}",
+                "image_url": url,
+                "source_url": hit.get("foreign_landing_url") or hit.get("license_url"),
+                "source": "openverse",
+            })
+        for r in results:
+            if not r.get("image_url") and extra_images:
+                r["image_url"] = extra_images.pop(0)["image_url"]
+        if not results:
+            results.extend(extra_images[:6])
+        elif extra_images and len(results) < 4:
+            results.extend(extra_images[: 4 - len(results)])
+    except Exception:
+        pass
+
+    return results[:8]
 
 
 # ---------------------------------------------------------------------------
@@ -350,21 +529,87 @@ def get_command(uav_id: str, db: Session = Depends(get_db)):
     uav = db.query(UAV).filter(UAV.uav_id == uav_id).first()
     if not uav:
         raise HTTPException(status_code=404, detail="UAV not found")
-    return {"uav_id": uav_id, "command": uav.pending_command or "NONE"}
+    return {
+        "uav_id": uav_id,
+        "command": uav.pending_command or "NONE",
+        "latitude": uav.command_lat,
+        "longitude": uav.command_lon,
+    }
 
 
 @app.post("/api/uavs/{uav_id}/command")
 def set_command(uav_id: str, payload: CommandIn, db: Session = Depends(get_db)):
     """Set manually -- e.g. from a 'Force RTH' button on the dashboard, or to
     clear a command back to NONE once the companion computer has acted on it."""
-    if payload.command not in ("NONE", "RTL", "HOLD"):
-        raise HTTPException(status_code=400, detail="command must be NONE, RTL, or HOLD")
+    cmd = (payload.command or "").upper().strip()
+    if cmd not in ALLOWED_COMMANDS:
+        raise HTTPException(status_code=400, detail=f"command must be one of {', '.join(ALLOWED_COMMANDS)}")
     uav = db.query(UAV).filter(UAV.uav_id == uav_id).first()
     if not uav:
         raise HTTPException(status_code=404, detail="UAV not found")
-    uav.pending_command = payload.command
+    if cmd == "GOTO":
+        if payload.latitude is None or payload.longitude is None:
+            raise HTTPException(status_code=400, detail="GOTO requires latitude and longitude")
+        if not (-90 <= payload.latitude <= 90) or not (-180 <= payload.longitude <= 180):
+            raise HTTPException(status_code=400, detail="latitude/longitude out of range")
+        uav.command_lat = payload.latitude
+        uav.command_lon = payload.longitude
+    elif cmd == "NONE":
+        uav.command_lat = None
+        uav.command_lon = None
+    else:
+        if payload.latitude is not None:
+            uav.command_lat = payload.latitude
+        if payload.longitude is not None:
+            uav.command_lon = payload.longitude
+    uav.pending_command = cmd
     db.commit()
-    return {"uav_id": uav_id, "command": uav.pending_command}
+    return {
+        "uav_id": uav_id,
+        "command": uav.pending_command,
+        "latitude": uav.command_lat,
+        "longitude": uav.command_lon,
+    }
+
+
+@app.get("/api/inventory/lookup")
+def inventory_lookup(q: str = Query(..., min_length=2)):
+    return {"query": q, "results": lookup_component(q)}
+
+
+@app.get("/api/inventory")
+def list_inventory(db: Session = Depends(get_db)):
+    items = db.query(InventoryItem).order_by(InventoryItem.created_at.desc()).all()
+    return [serialize_inventory(i) for i in items]
+
+
+@app.post("/api/inventory")
+def add_inventory(payload: InventoryIn, db: Session = Depends(get_db)):
+    model = payload.model.strip()
+    if not model:
+        raise HTTPException(status_code=400, detail="model is required")
+    item = InventoryItem(
+        model=model,
+        title=(payload.title or "").strip() or model,
+        description=payload.description,
+        image_url=payload.image_url,
+        source_url=payload.source_url,
+        notes=payload.notes,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return serialize_inventory(item)
+
+
+@app.delete("/api/inventory/{item_id}")
+def delete_inventory(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    db.delete(item)
+    db.commit()
+    return {"status": "deleted"}
 
 
 @app.delete("/api/uavs/{uav_id}")

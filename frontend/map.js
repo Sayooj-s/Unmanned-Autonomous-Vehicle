@@ -9,12 +9,26 @@ function initMap() {
   map = L.map("map", { zoomControl: true, attributionControl: true })
     .setView([20.5937, 78.9629], 4); // neutral default view until real data arrives
 
-  // Dark basemap to match the dashboard theme
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  const dark = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
     attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
     subdomains: "abcd",
     maxZoom: 19,
-  }).addTo(map);
+  });
+
+  const satellite = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics",
+      maxZoom: 19,
+    }
+  );
+
+  dark.addTo(map);
+  L.control.layers(
+    { "Dark streets": dark, "Satellite": satellite },
+    {},
+    { position: "topright", collapsed: false }
+  ).addTo(map);
 }
 
 function droneIcon() {
