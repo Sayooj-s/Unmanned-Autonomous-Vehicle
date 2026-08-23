@@ -13,6 +13,7 @@ Then open http://localhost:8000 for the dashboard.
 """
 
 import os
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -55,12 +56,30 @@ class UAV(Base):
     registered_at = Column(DateTime, default=datetime.utcnow)
 
     # The action the backend wants this UAV to take right now: "NONE",
-    # "RTL" (return to launch), or "HOLD" (loiter in place). The companion
-    # computer (e.g. Jetson) polls GET /api/uavs/{uav_id}/command and acts on
-    # this, then the backend clears it back to "NONE" once issued.
+    # "RTL" (return to launch), "HOLD" (loiter in place), or "GOTO" (fly to
+    # command_lat/command_lon). The companion computer (e.g. Jetson) polls
+    # GET /api/uavs/{uav_id}/command and acts on this, then the backend
+    # clears it back to "NONE" once issued.
     pending_command = Column(String, default="NONE")
+    command_lat = Column(Float, nullable=True)   # destination latitude for GOTO
+    command_lon = Column(Float, nullable=True)   # destination longitude for GOTO
 
     telemetry = relationship("Telemetry", back_populates="uav", cascade="all, delete-orphan")
+
+
+class InventoryItem(Base):
+    """A spare part / component in the build inventory. `query` is exactly
+    what the operator typed (e.g. a model number); the rest is filled in
+    by a best-effort web lookup at add-time, and can be overridden."""
+    __tablename__ = "inventory"
+    id = Column(Integer, primary_key=True, index=True)
+    query = Column(String)
+    title = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
+    source_url = Column(String, nullable=True)
+    quantity = Column(Integer, default=1)
+    added_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Telemetry(Base):
@@ -146,6 +165,83 @@ def evaluate_alert(latest: "Telemetry | None") -> dict:
 Base.metadata.create_all(bind=engine)
 
 
+# ---------------------------------------------------------------------------
+# Component lookup (best-effort web search, no API key required)
+# ---------------------------------------------------------------------------
+# Uses the `duckduckgo-search` package to find a title/description/image for
+# whatever the operator typed (e.g. "T-Motor MN3110 780KV"). This is a
+# best-effort convenience, not an authoritative parts database -- results can
+# be missing or wrong, so the operator can always edit/override before
+# saving, and the raw query is always kept alongside whatever was found.
+#
+# In-memory cache (per backend process) so re-searching the same part name
+# doesn't burn another request against DuckDuckGo's rate limit. Cleared on
+# restart -- fine for this use case, not meant to be durable storage.
+_lookup_cache: dict = {}
+LOOKUP_CACHE_TTL_SECONDS = 60 * 60 * 6  # 6 hours
+
+def lookup_component(query: str) -> dict:
+    query = (query or "").strip()
+    if not query:
+        return {"found": False}
+
+    cache_key = query.lower()
+    cached = _lookup_cache.get(cache_key)
+    if cached is not None and (time.time() - cached["_cached_at"]) < LOOKUP_CACHE_TTL_SECONDS:
+        return {k: v for k, v in cached.items() if k != "_cached_at"}
+
+    try:
+        # `duckduckgo_search` was renamed to `ddgs` -- try the new package
+        # first, fall back to the old one so this keeps working either way.
+        try:
+            from ddgs import DDGS
+        except ImportError:
+            from duckduckgo_search import DDGS
+    except ImportError:
+        return {"found": False, "error": "ddgs (or duckduckgo-search) is not installed on the backend"}
+
+    title = None
+    description = None
+    source_url = None
+    image_url = None
+    errors = []
+
+    # Text and image search are independent -- DuckDuckGo's image endpoint in
+    # particular gets rate-limited/blocked more often than the text one, so a
+    # broken image lookup shouldn't also sink a working text result.
+    try:
+        with DDGS() as ddgs:
+            text_results = list(ddgs.text(f"{query} specifications datasheet", max_results=3))
+            if text_results:
+                top = text_results[0]
+                title = top.get("title")
+                description = top.get("body")
+                source_url = top.get("href")
+    except Exception as e:
+        errors.append(f"text search: {e}")
+
+    try:
+        with DDGS() as ddgs:
+            image_results = list(ddgs.images(query, max_results=3))
+            if image_results:
+                image_url = image_results[0].get("image")
+    except Exception as e:
+        errors.append(f"image search: {e}")
+
+    if not title and not image_url:
+        return {"found": False, "error": "; ".join(errors) if errors else None}
+
+    result = {
+        "found": True,
+        "title": title or query,
+        "description": description,
+        "image_url": image_url,
+        "source_url": source_url,
+    }
+    _lookup_cache[cache_key] = {**result, "_cached_at": time.time()}
+    return result
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -180,7 +276,29 @@ class UAVRegister(BaseModel):
 
 
 class CommandIn(BaseModel):
-    command: str  # "NONE", "RTL", or "HOLD"
+    command: str  # "NONE", "RTL", "HOLD", or "GOTO"
+    lat: Optional[float] = None   # required when command == "GOTO"
+    lon: Optional[float] = None   # required when command == "GOTO"
+
+
+class InventoryLookupIn(BaseModel):
+    query: str
+
+
+class InventoryAddIn(BaseModel):
+    query: str
+    quantity: Optional[int] = 1
+    # Optional overrides -- if provided, these are trusted as-is and no
+    # lookup is performed. Lets the frontend save exactly what it already
+    # showed the operator in the lookup preview, without a second search.
+    title: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    source_url: Optional[str] = None
+
+
+class InventoryUpdateIn(BaseModel):
+    quantity: Optional[int] = None
 
 
 class TelemetryIn(BaseModel):
@@ -225,6 +343,21 @@ def serialize_uav(u: UAV) -> dict:
         "model": u.model,
         "registered_at": u.registered_at.isoformat() if u.registered_at else None,
         "pending_command": u.pending_command or "NONE",
+        "command_lat": u.command_lat,
+        "command_lon": u.command_lon,
+    }
+
+
+def serialize_inventory(i: InventoryItem) -> dict:
+    return {
+        "id": i.id,
+        "query": i.query,
+        "title": i.title,
+        "description": i.description,
+        "image_url": i.image_url,
+        "source_url": i.source_url,
+        "quantity": i.quantity,
+        "added_at": i.added_at.isoformat() if i.added_at else None,
     }
 
 
@@ -346,25 +479,113 @@ def get_latest(uav_id: str, db: Session = Depends(get_db)):
 @app.get("/api/uavs/{uav_id}/command")
 def get_command(uav_id: str, db: Session = Depends(get_db)):
     """Polled by the companion computer (e.g. Jetson) to check whether it
-    should RTL, hold, or do nothing right now."""
+    should RTL, hold, fly to a point, or do nothing right now."""
     uav = db.query(UAV).filter(UAV.uav_id == uav_id).first()
     if not uav:
         raise HTTPException(status_code=404, detail="UAV not found")
-    return {"uav_id": uav_id, "command": uav.pending_command or "NONE"}
+    return {
+        "uav_id": uav_id,
+        "command": uav.pending_command or "NONE",
+        "lat": uav.command_lat,
+        "lon": uav.command_lon,
+    }
 
 
 @app.post("/api/uavs/{uav_id}/command")
 def set_command(uav_id: str, payload: CommandIn, db: Session = Depends(get_db)):
-    """Set manually -- e.g. from a 'Force RTH' button on the dashboard, or to
+    """Set manually -- e.g. from the Commanding card on the dashboard, or to
     clear a command back to NONE once the companion computer has acted on it."""
-    if payload.command not in ("NONE", "RTL", "HOLD"):
-        raise HTTPException(status_code=400, detail="command must be NONE, RTL, or HOLD")
+    if payload.command not in ("NONE", "RTL", "HOLD", "GOTO"):
+        raise HTTPException(status_code=400, detail="command must be NONE, RTL, HOLD, or GOTO")
+    if payload.command == "GOTO" and (payload.lat is None or payload.lon is None):
+        raise HTTPException(status_code=400, detail="GOTO requires both lat and lon")
+    if payload.lat is not None and not (-90 <= payload.lat <= 90):
+        raise HTTPException(status_code=400, detail="lat must be between -90 and 90")
+    if payload.lon is not None and not (-180 <= payload.lon <= 180):
+        raise HTTPException(status_code=400, detail="lon must be between -180 and 180")
+
     uav = db.query(UAV).filter(UAV.uav_id == uav_id).first()
     if not uav:
         raise HTTPException(status_code=404, detail="UAV not found")
+
     uav.pending_command = payload.command
+    if payload.command == "GOTO":
+        uav.command_lat = payload.lat
+        uav.command_lon = payload.lon
+    else:
+        uav.command_lat = None
+        uav.command_lon = None
     db.commit()
-    return {"uav_id": uav_id, "command": uav.pending_command}
+    return {
+        "uav_id": uav_id,
+        "command": uav.pending_command,
+        "lat": uav.command_lat,
+        "lon": uav.command_lon,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Inventory routes
+# ---------------------------------------------------------------------------
+
+@app.post("/api/inventory/lookup")
+def inventory_lookup(payload: InventoryLookupIn):
+    """Look up a typed component/model name on the web and return a
+    best-effort title, description, image, and source link. Does not save
+    anything -- used to show a live preview while the operator types."""
+    return lookup_component(payload.query)
+
+
+@app.get("/api/inventory")
+def list_inventory(db: Session = Depends(get_db)):
+    items = db.query(InventoryItem).order_by(InventoryItem.added_at.desc()).all()
+    return [serialize_inventory(i) for i in items]
+
+
+@app.post("/api/inventory")
+def add_inventory(payload: InventoryAddIn, db: Session = Depends(get_db)):
+    # If the caller already has looked-up details (from the preview step),
+    # trust them and skip a second search. Otherwise, look it up now.
+    data = {}
+    if payload.title is None and payload.image_url is None:
+        data = lookup_component(payload.query)
+
+    item = InventoryItem(
+        query=payload.query,
+        title=payload.title or data.get("title") or payload.query,
+        description=payload.description or data.get("description"),
+        image_url=payload.image_url or data.get("image_url"),
+        source_url=payload.source_url or data.get("source_url"),
+        quantity=payload.quantity if payload.quantity is not None else 1,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return serialize_inventory(item)
+
+
+@app.patch("/api/inventory/{item_id}")
+def update_inventory(item_id: int, payload: InventoryUpdateIn, db: Session = Depends(get_db)):
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if payload.quantity is not None:
+        if payload.quantity < 0:
+            raise HTTPException(status_code=400, detail="quantity cannot be negative")
+        item.quantity = payload.quantity
+    db.commit()
+    db.refresh(item)
+    return serialize_inventory(item)
+
+
+@app.delete("/api/inventory/{item_id}")
+def delete_inventory(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    db.delete(item)
+    db.commit()
+    return {"status": "deleted"}
 
 
 @app.delete("/api/uavs/{uav_id}")

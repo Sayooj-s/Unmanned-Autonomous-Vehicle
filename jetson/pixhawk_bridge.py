@@ -67,14 +67,16 @@ def flush_buffer(backend_url, uav_id):
 
 
 def check_pending_command(backend_url, uav_id):
-    """Ask the backend if it wants this drone to RTL or hold right now."""
+    """Ask the backend if it wants this drone to RTL, hold, go to a point,
+    or do nothing right now. Returns (command, lat, lon)."""
     try:
         resp = requests.get(f"{backend_url}/api/uavs/{uav_id}/command", timeout=5)
         if resp.ok:
-            return resp.json().get("command", "NONE")
+            data = resp.json()
+            return data.get("command", "NONE"), data.get("lat"), data.get("lon")
     except requests.RequestException as e:
         print(f"Could not check pending command: {e}")
-    return "NONE"
+    return "NONE", None, None
 
 
 def clear_command(backend_url, uav_id):
@@ -110,6 +112,37 @@ def send_hold(master):
         )
     else:
         print("LOITER mode not available on this flight controller/firmware.")
+
+
+def send_goto(master, lat, lon, alt=30.0):
+    """Command the flight controller to fly to a specific lat/lon right now.
+    Switches to GUIDED mode, then sends a single waypoint with current=2,
+    which ArduPilot treats as an immediate guided reposition (not a mission
+    upload). `alt` is relative altitude in meters above the home/launch
+    point -- tune the default for your airframe and site.
+
+    NOTE: this is untested against real hardware in this environment --
+    verify it in SITL (ArduPilot's software-in-the-loop simulator) before
+    trusting it on a real airframe, the same way you would any new command
+    path here."""
+    print(f">>> COMMANDING GOTO destination lat={lat}, lon={lon}, alt={alt}m <<<")
+    mode_id = master.mode_mapping().get("GUIDED")
+    if mode_id is None:
+        print("GUIDED mode not available on this flight controller/firmware.")
+        return
+    master.mav.set_mode_send(
+        master.target_system,
+        mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+        mode_id
+    )
+    master.mav.mission_item_send(
+        master.target_system, master.target_component,
+        0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+        mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+        2, 0,      # current=2 -> ArduPilot: guided-mode "go here now"
+        0, 0, 0, 0,
+        lat, lon, alt
+    )
 
 
 def estimate_soh(voltage, current, cycle_count=0):
@@ -212,20 +245,27 @@ def main():
                     elif auto_cmd == "HOLD":
                         send_hold(master)
                         clear_command(args.backend_url, args.uav_id)
+                    # Note: the backend only auto-triggers RTL/HOLD on a
+                    # critical reading -- GOTO is always operator-issued, so
+                    # it's picked up by the check_pending_command() poll
+                    # below rather than here.
             except requests.RequestException as e:
                 print(f"Network unreachable, buffering reading locally: {e}")
                 buffer_reading(payload)
             last_post = now
 
         # Also separately poll for a manually-issued command (e.g. operator
-        # pressed "Force Return to Base" on the dashboard) -- independent of
-        # whether a new telemetry reading was just sent.
-        cmd = check_pending_command(args.backend_url, args.uav_id)
+        # pressed "Force Return to Base" or sent a GOTO on the dashboard) --
+        # independent of whether a new telemetry reading was just sent.
+        cmd, cmd_lat, cmd_lon = check_pending_command(args.backend_url, args.uav_id)
         if cmd == "RTL":
             send_rtl(master)
             clear_command(args.backend_url, args.uav_id)
         elif cmd == "HOLD":
             send_hold(master)
+            clear_command(args.backend_url, args.uav_id)
+        elif cmd == "GOTO" and cmd_lat is not None and cmd_lon is not None:
+            send_goto(master, cmd_lat, cmd_lon)
             clear_command(args.backend_url, args.uav_id)
 
 

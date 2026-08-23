@@ -10,11 +10,33 @@ function initMap() {
     .setView([20.5937, 78.9629], 4); // neutral default view until real data arrives
 
   // Dark basemap to match the dashboard theme
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  const darkLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
     attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
     subdomains: "abcd",
     maxZoom: 19,
   }).addTo(map);
+
+  // Satellite imagery (Esri World Imagery)
+  const satelliteLayer = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      maxZoom: 19,
+    }
+  );
+
+  // Optional place-name/road labels to overlay on top of the satellite imagery
+  const satelliteLabels = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, pane: "shadowPane" }
+  );
+  const satelliteGroup = L.layerGroup([satelliteLayer, satelliteLabels]);
+
+  L.control.layers(
+    { "Dark": darkLayer, "Satellite": satelliteGroup },
+    {},
+    { position: "topright", collapsed: false }
+  ).addTo(map);
 }
 
 function droneIcon() {

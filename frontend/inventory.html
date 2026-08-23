@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UAV Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="inventory.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <a href="index.html" class="back-link">← Home</a>
+    <span class="brand-sep">/</span>
+    <span class="brand-mark">▤</span>
+    <span class="brand-text">INVENTORY</span>
+  </div>
+  <div class="link-status" id="linkStatus">
+    <span class="pulse-dot" id="pulseDot"></span>
+    <span id="linkLabel">CONNECTING…</span>
+  </div>
+</header>
+
+<main class="inv-main">
+
+  <section class="inv-add">
+    <div class="field-group">
+      <label class="field-label" for="componentInput">Type a component or model</label>
+      <div class="search-row">
+        <input
+          class="field-input"
+          type="text"
+          id="componentInput"
+          placeholder="e.g. T-Motor MN3110 780KV, Pixhawk 6C, 6S 5200mAh LiPo…"
+          autocomplete="off"
+        />
+        <button class="btn-search" id="searchBtn" type="button">Search</button>
+      </div>
+      <div class="field-hint">Press Enter or click Search once you've finished typing — this looks it up on the web.</div>
+    </div>
+
+    <div class="lookup-status" id="lookupStatus"></div>
+
+    <div class="lookup-preview" id="lookupPreview" style="display:none;">
+      <img class="lookup-img" id="lookupImg" alt="" />
+      <div class="lookup-info">
+        <div class="lookup-title" id="lookupTitle">—</div>
+        <div class="lookup-desc" id="lookupDesc"></div>
+        <a class="lookup-source" id="lookupSource" href="#" target="_blank" rel="noopener">View source →</a>
+      </div>
+    </div>
+
+    <details class="manual-details" id="manualDetails">
+      <summary>Enter details manually instead (e.g. if the web lookup is unavailable)</summary>
+      <div class="field-group">
+        <label class="field-label" for="manualTitle">Title / name</label>
+        <input class="field-input" type="text" id="manualTitle" placeholder="e.g. Holybro Pixhawk 6C" />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="manualImage">Image URL</label>
+        <input class="field-input" type="text" id="manualImage" placeholder="Paste an image URL (e.g. from Google Images → copy image address)" />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="manualDesc">Description</label>
+        <input class="field-input" type="text" id="manualDesc" placeholder="Optional short description" />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="manualSource">Source URL</label>
+        <input class="field-input" type="text" id="manualSource" placeholder="Optional link, e.g. the product page" />
+      </div>
+    </details>
+
+    <div class="add-row">
+      <div class="field-group qty-group">
+        <label class="field-label" for="qtyInput">Qty</label>
+        <input class="field-input" type="number" min="1" step="1" value="1" id="qtyInput" />
+      </div>
+      <button class="btn-add" id="addBtn" disabled>Add to Inventory</button>
+    </div>
+    <div class="add-hint">You can add without a match found — it'll be saved with just the name you typed.</div>
+  </section>
+
+  <section class="inv-list-wrap">
+    <div class="inv-list-header">
+      <span>INVENTORY</span>
+      <span class="inv-count" id="invCount">0</span>
+    </div>
+    <div class="inv-list" id="invList">
+      <!-- items injected here -->
+    </div>
+    <div class="inv-empty" id="invEmpty">No components added yet.</div>
+  </section>
+
+</main>
+
+<script src="inventory.js"></script>
+</body>
+</html>
