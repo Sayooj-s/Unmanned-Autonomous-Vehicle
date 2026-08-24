@@ -615,13 +615,25 @@ for p in candidate_frontend_paths:
         frontend_path = os.path.abspath(p)
         break
 
+@app.get("/debug-paths", include_in_schema=False)
+def debug_paths():
+    return {
+        "base_dir": BASE_DIR,
+        "cwd": os.getcwd(),
+        "frontend_path": frontend_path,
+        "frontend_exists": os.path.isdir(frontend_path) if frontend_path else False,
+        "frontend_files": os.listdir(frontend_path) if (frontend_path and os.path.isdir(frontend_path)) else [],
+        "candidate_paths": candidate_frontend_paths,
+    }
+
+
 if frontend_path and os.path.isdir(frontend_path):
     @app.get("/", include_in_schema=False)
     def serve_root():
         index_file = os.path.join(frontend_path, "index.html")
         if os.path.isfile(index_file):
             return FileResponse(index_file)
-        raise HTTPException(status_code=404, detail="index.html not found")
+        return FileResponse(os.path.join(frontend_path, "fleet.html"))
 
     @app.get("/{page_name}.html", include_in_schema=False)
     def serve_html_page(page_name: str):
