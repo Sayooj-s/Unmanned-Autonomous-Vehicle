@@ -600,14 +600,13 @@ def delete_uav(uav_id: str, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Serve the dashboard frontend as static files
+# Serve the dashboard frontend as static files & direct routes
 # ---------------------------------------------------------------------------
-# Check multiple candidate directories so it works whether running from repo root
-# or inside the backend folder on Railway / local
 candidate_frontend_paths = [
     os.path.join(BASE_DIR, "..", "frontend"),
     os.path.join(os.getcwd(), "frontend"),
     os.path.join(BASE_DIR, "frontend"),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend")),
 ]
 
 frontend_path = None
@@ -617,12 +616,20 @@ for p in candidate_frontend_paths:
         break
 
 if frontend_path and os.path.isdir(frontend_path):
-    index_file = os.path.join(frontend_path, "index.html")
-    if os.path.isfile(index_file):
-        @app.get("/", include_in_schema=False)
-        def serve_index():
+    @app.get("/", include_in_schema=False)
+    def serve_root():
+        index_file = os.path.join(frontend_path, "index.html")
+        if os.path.isfile(index_file):
             return FileResponse(index_file)
-    
+        raise HTTPException(status_code=404, detail="index.html not found")
+
+    @app.get("/{page_name}.html", include_in_schema=False)
+    def serve_html_page(page_name: str):
+        target_file = os.path.join(frontend_path, f"{page_name}.html")
+        if os.path.isfile(target_file):
+            return FileResponse(target_file)
+        raise HTTPException(status_code=404, detail=f"{page_name}.html not found")
+
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
 else:
     @app.get("/", include_in_schema=False)
@@ -631,5 +638,7 @@ else:
             "status": "online",
             "service": "UAV Telemetry API",
             "docs": "/docs",
-            "warning": "Frontend directory not found at candidate paths."
+            "base_dir": BASE_DIR,
+            "cwd": os.getcwd(),
+            "warning": "Frontend folder not found."
         }
