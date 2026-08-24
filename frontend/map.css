@@ -13,9 +13,12 @@
   --sans: 'Inter', system-ui, sans-serif;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -27,7 +30,9 @@ html, body {
 
 .topbar {
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -54,11 +59,18 @@ html, body {
   font-size: 12px;
 }
 
-.back-link:hover { text-decoration: underline; }
+.back-link:hover {
+  text-decoration: underline;
+}
 
-.brand-sep { color: var(--border); }
+.brand-sep {
+  color: var(--border);
+}
 
-.brand-mark { color: var(--accent); font-size: 16px; }
+.brand-mark {
+  color: var(--accent);
+  font-size: 16px;
+}
 
 .link-status {
   display: flex;
@@ -69,28 +81,49 @@ html, body {
   color: var(--text-muted);
 }
 
-#linkLabel { color: var(--accent); }
-#linkLabel.offline { color: var(--red); }
+#linkLabel {
+  color: var(--accent);
+}
+
+#linkLabel.offline {
+  color: var(--red);
+}
 
 .pulse-dot {
-  width: 8px; height: 8px; border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent);
   animation: pulse 1.6s ease-in-out infinite;
 }
+
 .pulse-dot.offline {
   background: var(--red);
   box-shadow: 0 0 8px var(--red);
   animation: none;
 }
+
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
 }
 
 #map {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 1;
   background: var(--bg);
 }
@@ -123,8 +156,14 @@ html, body {
   border-bottom: 1px solid var(--border);
   cursor: pointer;
 }
-.overlay-uav:last-child { border-bottom: none; }
-.overlay-uav:hover { background: var(--panel-alt); }
+
+.overlay-uav:last-child {
+  border-bottom: none;
+}
+
+.overlay-uav:hover {
+  background: var(--panel-alt);
+}
 
 .overlay-uav-name {
   font-size: 12px;
@@ -150,12 +189,17 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.leaflet-popup-tip { background: var(--panel); }
+
+.leaflet-popup-tip {
+  background: var(--panel);
+}
+
 .leaflet-popup-content {
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.7;
 }
+
 .popup-title {
   font-weight: 600;
   margin-bottom: 4px;
@@ -183,8 +227,32 @@ html, body {
   padding: 8px 12px !important;
   box-shadow: none !important;
 }
-.leaflet-control-layers-list { color: var(--text); }
-.leaflet-control-layers label { margin: 3px 0; }
-.leaflet-control-layers-selector { margin-right: 6px; }
-.leaflet-control-layers-separator { border-color: var(--border) !important; }
-.leaflet-touch .leaflet-control-layers { border-radius: 10px !important; }
+
+.leaflet-control-layers-list {
+  color: var(--text);
+}
+
+.leaflet-control-layers label {
+  margin: 3px 0;
+}
+
+.leaflet-control-layers-selector {
+  margin-right: 6px;
+}
+
+.leaflet-control-layers-separator {
+  border-color: var(--border) !important;
+}
+
+.leaflet-touch .leaflet-control-layers {
+  border-radius: 10px !important;
+}
+
+/* Leaflet's default zoom control (top-left) and our layer switcher
+   (top-right) both render inside #map, which sits in a lower stacking
+   context than the absolutely-positioned topbar above it -- so without
+   this, both get visually hidden underneath the topbar. Push them down
+   to sit just below it instead. */
+.leaflet-top {
+  top: 70px !important;
+}
