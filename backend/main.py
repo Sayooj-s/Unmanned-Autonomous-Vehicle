@@ -19,6 +19,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
@@ -601,6 +602,34 @@ def delete_uav(uav_id: str, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # Serve the dashboard frontend as static files
 # ---------------------------------------------------------------------------
-frontend_path = os.path.join(BASE_DIR, "..", "frontend")
-if os.path.isdir(frontend_path):
+# Check multiple candidate directories so it works whether running from repo root
+# or inside the backend folder on Railway / local
+candidate_frontend_paths = [
+    os.path.join(BASE_DIR, "..", "frontend"),
+    os.path.join(os.getcwd(), "frontend"),
+    os.path.join(BASE_DIR, "frontend"),
+]
+
+frontend_path = None
+for p in candidate_frontend_paths:
+    if os.path.isdir(p):
+        frontend_path = os.path.abspath(p)
+        break
+
+if frontend_path and os.path.isdir(frontend_path):
+    index_file = os.path.join(frontend_path, "index.html")
+    if os.path.isfile(index_file):
+        @app.get("/", include_in_schema=False)
+        def serve_index():
+            return FileResponse(index_file)
+    
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+else:
+    @app.get("/", include_in_schema=False)
+    def root_fallback():
+        return {
+            "status": "online",
+            "service": "UAV Telemetry API",
+            "docs": "/docs",
+            "warning": "Frontend directory not found at candidate paths."
+        }
