@@ -249,10 +249,20 @@ body {
 }
 
 /* Leaflet's default zoom control (top-left) and our layer switcher
-   (top-right) both render inside #map, which sits in a lower stacking
-   context than the absolutely-positioned topbar above it -- so without
-   this, both get visually hidden underneath the topbar. Push them down
-   to sit just below it instead. */
+   (top-right) both render inside #map. The fleet overlay (.fleet-overlay)
+   is docked at top: 70px; left: 16px; with width: 240px.
+   Offset Leaflet's top-left controls below or beside the overlay to avoid
+   any collision while keeping the top-right layer switcher cleanly aligned. */
 .leaflet-top {
   top: 70px !important;
+}
+
+.leaflet-left .leaflet-control {
+  margin-left: 16px !important;
+}
+
+/* Position zoom controls below the fleet overlay card on the left */
+.leaflet-top.leaflet-left {
+  top: auto !important;
+  bottom: 24px !important;
 }
