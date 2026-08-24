@@ -104,6 +104,11 @@ function populateUavSelect(uavs) {
   ).join("");
   if (prevValue && uavs.some(u => u.uav_id === prevValue)) {
     select.value = prevValue;
+  } else if (!selectedUavId && uavs.length > 0) {
+    selectedUavId = uavs[0].uav_id;
+    select.value = selectedUavId;
+    const uav = uavs.find(u => u.uav_id === selectedUavId);
+    if (uav) renderUavState(uav);
   }
 }
 

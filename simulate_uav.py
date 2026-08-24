@@ -19,8 +19,9 @@ from datetime import datetime, timezone
 import requests
 
 
-def simulate_step(state):
-    """Advance one UAV's simulated battery/vibration/position state by one tick."""
+def simulate_step(state, command_info=None):
+    """Advance one UAV's simulated battery/vibration/position state by one tick,
+    reacting to GOTO, RTL, and HOLD commands received from the backend."""
     # Battery discharges slowly over the flight, with small noise
     state["soc"] = max(0.0, state["soc"] - random.uniform(0.05, 0.25))
     state["soh"] = max(70.0, state["soh"] - random.uniform(0, 0.002))  # degrades very slowly
@@ -33,13 +34,48 @@ def simulate_step(state):
     state["vib_y"] = 0.05 + 0.02 * math.cos(t / 4.0) + random.uniform(-0.01, 0.01)
     state["vib_z"] = 0.08 + 0.015 * math.sin(t / 2.0) + random.uniform(-0.01, 0.01)
 
-    # Simulated GPS: fly a small circular loop around the UAV's base point,
-    # so the map page has real, moving lat/lon/altitude to plot.
-    radius_deg = 0.003  # roughly ~300m loop
-    angle = t / 10.0
-    state["lat"] = state["base_lat"] + radius_deg * math.sin(angle)
-    state["lon"] = state["base_lon"] + radius_deg * math.cos(angle)
-    state["alt"] = 30 + 5 * math.sin(t / 5.0)
+    cmd = command_info.get("command", "NONE") if command_info else "NONE"
+    target_lat = command_info.get("lat") if command_info else None
+    target_lon = command_info.get("lon") if command_info else None
+
+    # Handle Flight Modes based on active command
+    if cmd == "HOLD":
+        # Hover / loiter at current position
+        state["alt"] = 30.0 + random.uniform(-0.2, 0.2)
+    elif cmd == "RTL":
+        # Return towards base launch point
+        d_lat = state["base_lat"] - state["lat"]
+        d_lon = state["base_lon"] - state["lon"]
+        dist = math.hypot(d_lat, d_lon)
+        if dist > 0.0001:
+            step = min(0.0006, dist)
+            state["lat"] += (d_lat / dist) * step
+            state["lon"] += (d_lon / dist) * step
+            state["alt"] = max(0.0, state["alt"] - 0.5)
+        else:
+            state["lat"] = state["base_lat"]
+            state["lon"] = state["base_lon"]
+            state["alt"] = 0.0  # Landed
+    elif cmd == "GOTO" and target_lat is not None and target_lon is not None:
+        # Fly towards the commanded destination point
+        d_lat = target_lat - state["lat"]
+        d_lon = target_lon - state["lon"]
+        dist = math.hypot(d_lat, d_lon)
+        if dist > 0.0001:
+            step = min(0.0008, dist)  # Fly towards waypoint
+            state["lat"] += (d_lat / dist) * step
+            state["lon"] += (d_lon / dist) * step
+            state["alt"] = 35.0 + random.uniform(-0.5, 0.5)
+        else:
+            state["lat"] = target_lat
+            state["lon"] = target_lon
+    else:
+        # Default patrol trajectory: orbit around base point
+        radius_deg = 0.003
+        angle = t / 10.0
+        state["lat"] = state["base_lat"] + radius_deg * math.sin(angle)
+        state["lon"] = state["base_lon"] + radius_deg * math.cos(angle)
+        state["alt"] = 30 + 5 * math.sin(t / 5.0)
 
     state["t"] += 1
     return state
@@ -91,7 +127,18 @@ def main():
     start = time.time()
     while time.time() - start < args.duration:
         for uav_id in args.uavs:
-            s = simulate_step(states[uav_id])
+            # Poll pending command from backend (GOTO, RTL, HOLD, NONE)
+            cmd_info = None
+            try:
+                resp = requests.get(f"{args.url}/api/uavs/{uav_id}/command", timeout=3)
+                if resp.ok:
+                    cmd_info = resp.json()
+            except requests.RequestException:
+                pass
+
+            s = simulate_step(states[uav_id], cmd_info)
+            active_cmd = cmd_info.get("command", "NONE") if cmd_info else "NONE"
+
             payload = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "battery_voltage": round(s["voltage"], 2),
@@ -108,7 +155,8 @@ def main():
             }
             try:
                 requests.post(f"{args.url}/api/uavs/{uav_id}/telemetry", json=payload, timeout=5)
-                print(f"[{uav_id}] SoC={payload['soc']}%  V={payload['battery_voltage']}  T={payload['temperature']}C")
+                cmd_tag = f" [CMD: {active_cmd}]" if active_cmd != "NONE" else ""
+                print(f"[{uav_id}]{cmd_tag} Lat={payload['latitude']:.5f} Lon={payload['longitude']:.5f} SoC={payload['soc']}% Alt={payload['altitude']}m")
             except requests.RequestException as e:
                 print(f"[{uav_id}] send failed: {e}")
 
