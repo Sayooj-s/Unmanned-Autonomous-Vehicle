@@ -19,7 +19,6 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
@@ -600,57 +599,24 @@ def delete_uav(uav_id: str, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Serve the dashboard frontend as static files & direct routes
+# Serve the dashboard frontend as static files
 # ---------------------------------------------------------------------------
-candidate_frontend_paths = [
-    os.path.join(BASE_DIR, "..", "frontend"),
-    os.path.join(os.getcwd(), "frontend"),
-    os.path.join(BASE_DIR, "frontend"),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend")),
+# Checks a few candidate locations so this works whether frontend/ lives
+# next to backend/ (local dev, repo root) or inside backend/ (how it's
+# deployed on Railway, where only the configured Root Directory gets
+# uploaded into the build).
+_candidate_frontend_paths = [
+    os.path.join(BASE_DIR, "frontend"),        # frontend/ nested inside backend/
+    os.path.join(BASE_DIR, "..", "frontend"),  # frontend/ next to backend/
 ]
 
 frontend_path = None
-for p in candidate_frontend_paths:
-    if os.path.isdir(p):
-        frontend_path = os.path.abspath(p)
+for _p in _candidate_frontend_paths:
+    if os.path.isdir(_p):
+        frontend_path = os.path.abspath(_p)
         break
 
-@app.get("/debug-paths", include_in_schema=False)
-def debug_paths():
-    return {
-        "base_dir": BASE_DIR,
-        "cwd": os.getcwd(),
-        "frontend_path": frontend_path,
-        "frontend_exists": os.path.isdir(frontend_path) if frontend_path else False,
-        "frontend_files": os.listdir(frontend_path) if (frontend_path and os.path.isdir(frontend_path)) else [],
-        "candidate_paths": candidate_frontend_paths,
-    }
-
-
-if frontend_path and os.path.isdir(frontend_path):
-    @app.get("/", include_in_schema=False)
-    def serve_root():
-        index_file = os.path.join(frontend_path, "index.html")
-        if os.path.isfile(index_file):
-            return FileResponse(index_file)
-        return FileResponse(os.path.join(frontend_path, "fleet.html"))
-
-    @app.get("/{page_name}.html", include_in_schema=False)
-    def serve_html_page(page_name: str):
-        target_file = os.path.join(frontend_path, f"{page_name}.html")
-        if os.path.isfile(target_file):
-            return FileResponse(target_file)
-        raise HTTPException(status_code=404, detail=f"{page_name}.html not found")
-
+if frontend_path:
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
 else:
-    @app.get("/", include_in_schema=False)
-    def root_fallback():
-        return {
-            "status": "online",
-            "service": "UAV Telemetry API",
-            "docs": "/docs",
-            "base_dir": BASE_DIR,
-            "cwd": os.getcwd(),
-            "warning": "Frontend folder not found."
-        }
+    print(f"WARNING: no frontend/ folder found in any of: {_candidate_frontend_paths}")
