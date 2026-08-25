@@ -490,6 +490,7 @@ def register_uav(payload: UAVRegister, db: Session = Depends(get_db)):
 def list_uavs(db: Session = Depends(get_db)):
     uavs = db.query(UAV).all()
     result = []
+    now = datetime.utcnow()
     for u in uavs:
         latest = (
             db.query(Telemetry)
@@ -500,6 +501,10 @@ def list_uavs(db: Session = Depends(get_db)):
         entry = serialize_uav(u)
         entry["latest"] = serialize_telemetry(latest) if latest else None
         entry["alert"] = evaluate_alert(latest)
+        # UAV is actively connected if it sent a reading within the last 10 seconds
+        entry["is_active"] = bool(
+            latest and latest.timestamp and (now - latest.timestamp).total_seconds() < 10
+        )
         result.append(entry)
     return result
 

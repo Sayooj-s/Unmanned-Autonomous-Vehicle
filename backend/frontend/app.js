@@ -231,7 +231,8 @@ async function refreshFleet() {
     const uavs = await fetchJSON("/api/uavs");
     lastFleetPayload = uavs;
     renderFleetList(uavs);
-    setLinkStatus(true);
+    const hasActiveUav = Array.isArray(uavs) && uavs.some(u => u.is_active);
+    setLinkStatus(hasActiveUav);
 
     if (selectedUavId) {
       await loadDetail(selectedUavId);

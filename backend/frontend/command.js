@@ -153,12 +153,19 @@ async function refresh() {
   try {
     const uavs = await fetchJSON("/api/uavs");
     uavsCache = uavs;
-    setLinkStatus(true);
     populateUavSelect(uavs);
 
     if (selectedUavId) {
       const uav = uavs.find(u => u.uav_id === selectedUavId);
-      if (uav) renderUavState(uav);
+      if (uav) {
+        renderUavState(uav);
+        setLinkStatus(Boolean(uav.is_active));
+      } else {
+        setLinkStatus(false);
+      }
+    } else {
+      const hasActiveUav = Array.isArray(uavs) && uavs.some(u => u.is_active);
+      setLinkStatus(hasActiveUav);
     }
   } catch (e) {
     console.error("Failed to reach backend:", e);

@@ -102,7 +102,8 @@ async function refreshMap() {
     if (!res.ok) throw new Error(res.statusText);
     const uavs = await res.json();
 
-    setLinkStatus(true);
+    const hasActiveUav = Array.isArray(uavs) && uavs.some(u => u.is_active);
+    setLinkStatus(hasActiveUav);
     renderOverlay(uavs);
 
     const validPoints = [];

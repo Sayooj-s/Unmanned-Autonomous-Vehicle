@@ -154,10 +154,20 @@ async function refreshFlights() {
   const uavId = document.getElementById("uavFilter").value;
   const path = uavId ? `/api/flights?uav_id=${encodeURIComponent(uavId)}` : "/api/flights";
   try {
-    const flights = await fetchJSON(path);
+    const [flights, uavs] = await Promise.all([
+      fetchJSON(path),
+      fetchJSON("/api/uavs").catch(() => []),
+    ]);
     flightsCache = flights;
-    setLinkStatus(true);
     renderFlights(flights);
+
+    if (uavId) {
+      const uav = uavs.find(u => u.uav_id === uavId);
+      setLinkStatus(Boolean(uav && uav.is_active));
+    } else {
+      const hasActiveUav = Array.isArray(uavs) && uavs.some(u => u.is_active);
+      setLinkStatus(hasActiveUav);
+    }
   } catch (e) {
     console.error("Failed to reach backend:", e);
     setLinkStatus(false);

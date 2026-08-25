@@ -326,8 +326,12 @@ async function removeItem(id) {
 
 async function refreshInventory() {
   try {
-    const items = await fetchJSON("/api/inventory");
-    setLinkStatus(true);
+    const [items, uavs] = await Promise.all([
+      fetchJSON("/api/inventory"),
+      fetchJSON("/api/uavs").catch(() => []),
+    ]);
+    const hasActiveUav = Array.isArray(uavs) && uavs.some(u => u.is_active);
+    setLinkStatus(hasActiveUav);
     renderInventory(items);
   } catch (e) {
     console.error("Failed to reach backend:", e);
