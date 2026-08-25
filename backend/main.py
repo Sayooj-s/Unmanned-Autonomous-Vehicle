@@ -13,6 +13,9 @@ Then open http://localhost:8000 for the dashboard.
 """
 
 import os
+import csv
+import io
+import math
 import time
 from datetime import datetime
 from typing import Optional
@@ -20,6 +23,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
@@ -107,6 +111,21 @@ class Telemetry(Base):
     longitude = Column(Float, nullable=True)
 
     uav = relationship("UAV", back_populates="telemetry")
+
+
+class Flight(Base):
+    """A manually-marked flight session for a UAV -- everything between an
+    operator pressing Start and End. Used to slice the continuous telemetry
+    stream into discrete flights for post-flight review/export, rather than
+    one undifferentiated timeline per UAV."""
+    __tablename__ = "flights"
+    id = Column(Integer, primary_key=True, index=True)
+    uav_id = Column(String, ForeignKey("uavs.uav_id"), index=True)
+    label = Column(String, nullable=True)          # optional operator note, e.g. "Site survey run 3"
+    started_at = Column(DateTime, default=datetime.utcnow, index=True)
+    ended_at = Column(DateTime, nullable=True)      # NULL while the flight is still in progress
+
+    uav = relationship("UAV")
 
 
 # ---------------------------------------------------------------------------
@@ -316,6 +335,94 @@ class TelemetryIn(BaseModel):
     longitude: Optional[float] = None
 
 
+class FlightStartIn(BaseModel):
+    label: Optional[str] = None
+
+
+def haversine_distance_m(lat1, lon1, lat2, lon2) -> float:
+    """Great-circle distance between two lat/lon points, in meters."""
+    R = 6371000  # Earth radius, meters
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def summarize_telemetry_rows(rows, duration_seconds: float) -> dict:
+    """Shared stats computation -- used by both flight_summary (a marked
+    flight's window) and the ad-hoc date/time range query."""
+    distance_m = 0.0
+    prev = None
+    altitudes, socs, vibrations = [], [], []
+    for r in rows:
+        if r.latitude is not None and r.longitude is not None:
+            if prev is not None:
+                distance_m += haversine_distance_m(prev[0], prev[1], r.latitude, r.longitude)
+            prev = (r.latitude, r.longitude)
+        if r.altitude is not None:
+            altitudes.append(r.altitude)
+        if r.soc is not None:
+            socs.append(r.soc)
+        if r.vibration_rms is not None:
+            vibrations.append(r.vibration_rms)
+
+    return {
+        "sample_count": len(rows),
+        "duration_seconds": duration_seconds,
+        "distance_m": round(distance_m, 1),
+        "max_altitude": max(altitudes) if altitudes else None,
+        "min_soc": min(socs) if socs else None,
+        "max_soc": max(socs) if socs else None,
+        "max_vibration_rms": max(vibrations) if vibrations else None,
+    }
+
+
+def query_telemetry_range(db: Session, uav_id: str, start: datetime, end: datetime):
+    """Naive-UTC-normalized range query -- strips any timezone info from
+    `start`/`end` so it compares cleanly against the naive-UTC timestamps
+    telemetry is stored with (datetime.utcnow(), no tzinfo). Callers should
+    already be passing UTC-equivalent instants; this just removes tzinfo
+    rather than converting, so it assumes that's already true."""
+    if start.tzinfo is not None:
+        start = start.replace(tzinfo=None)
+    if end.tzinfo is not None:
+        end = end.replace(tzinfo=None)
+    return (
+        db.query(Telemetry)
+        .filter(
+            Telemetry.uav_id == uav_id,
+            Telemetry.timestamp >= start,
+            Telemetry.timestamp <= end,
+        )
+        .order_by(Telemetry.timestamp.asc())
+        .all()
+    )
+
+
+def flight_summary(db: Session, flight: Flight) -> dict:
+    """Compute duration, distance flown, and min/max stats from the raw
+    telemetry rows that fall within this flight's time window."""
+    end_time = flight.ended_at or datetime.utcnow()
+    rows = query_telemetry_range(db, flight.uav_id, flight.started_at, end_time)
+    duration_seconds = (end_time - flight.started_at).total_seconds()
+    return summarize_telemetry_rows(rows, duration_seconds)
+
+
+def serialize_flight(f: Flight, db: Optional[Session] = None) -> dict:
+    data = {
+        "id": f.id,
+        "uav_id": f.uav_id,
+        "label": f.label,
+        "started_at": f.started_at.isoformat() if f.started_at else None,
+        "ended_at": f.ended_at.isoformat() if f.ended_at else None,
+        "in_progress": f.ended_at is None,
+    }
+    if db is not None:
+        data["summary"] = flight_summary(db, f)
+    return data
+
+
 def serialize_telemetry(row: Telemetry) -> dict:
     return {
         "id": row.id,
@@ -474,6 +581,173 @@ def get_latest(uav_id: str, db: Session = Depends(get_db)):
     result = serialize_telemetry(row)
     result["alert"] = evaluate_alert(row)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Flight log routes (manual start/end, list, detail, CSV export)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/uavs/{uav_id}/flights/current")
+def get_current_flight(uav_id: str, db: Session = Depends(get_db)):
+    """Returns the in-progress flight for this UAV, if any -- lets the
+    frontend restore Start/End button state correctly after a page reload."""
+    flight = (
+        db.query(Flight)
+        .filter(Flight.uav_id == uav_id, Flight.ended_at.is_(None))
+        .order_by(Flight.started_at.desc())
+        .first()
+    )
+    return serialize_flight(flight, db) if flight else None
+
+
+@app.post("/api/uavs/{uav_id}/flights/start")
+def start_flight(uav_id: str, payload: FlightStartIn, db: Session = Depends(get_db)):
+    uav = db.query(UAV).filter(UAV.uav_id == uav_id).first()
+    if not uav:
+        raise HTTPException(status_code=404, detail="UAV not found")
+
+    existing = (
+        db.query(Flight)
+        .filter(Flight.uav_id == uav_id, Flight.ended_at.is_(None))
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="A flight is already in progress for this UAV -- end it first")
+
+    flight = Flight(uav_id=uav_id, label=payload.label, started_at=datetime.utcnow())
+    db.add(flight)
+    db.commit()
+    db.refresh(flight)
+    return serialize_flight(flight, db)
+
+
+@app.post("/api/uavs/{uav_id}/flights/end")
+def end_flight(uav_id: str, db: Session = Depends(get_db)):
+    flight = (
+        db.query(Flight)
+        .filter(Flight.uav_id == uav_id, Flight.ended_at.is_(None))
+        .order_by(Flight.started_at.desc())
+        .first()
+    )
+    if not flight:
+        raise HTTPException(status_code=404, detail="No flight in progress for this UAV")
+
+    flight.ended_at = datetime.utcnow()
+    db.commit()
+    db.refresh(flight)
+    return serialize_flight(flight, db)
+
+
+@app.get("/api/flights")
+def list_flights(uav_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """All past + in-progress flights, optionally filtered to one UAV, most
+    recent first. Summary stats are included per flight for the Flight Log
+    page (kept lightweight -- a handful of flights, not thousands)."""
+    q = db.query(Flight)
+    if uav_id:
+        q = q.filter(Flight.uav_id == uav_id)
+    flights = q.order_by(Flight.started_at.desc()).all()
+    return [serialize_flight(f, db) for f in flights]
+
+
+@app.get("/api/flights/{flight_id}")
+def get_flight(flight_id: int, db: Session = Depends(get_db)):
+    flight = db.query(Flight).filter(Flight.id == flight_id).first()
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+    return serialize_flight(flight, db)
+
+
+@app.delete("/api/flights/{flight_id}")
+def delete_flight(flight_id: int, db: Session = Depends(get_db)):
+    """Deletes the flight record only -- the underlying telemetry rows stay
+    in the database either way, since they belong to the UAV's timeline."""
+    flight = db.query(Flight).filter(Flight.id == flight_id).first()
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+    db.delete(flight)
+    db.commit()
+    return {"status": "deleted"}
+
+
+def telemetry_rows_to_csv_response(rows, filename: str) -> StreamingResponse:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow([
+        "timestamp", "latitude", "longitude", "altitude",
+        "battery_voltage", "current", "soc", "soh", "temperature",
+        "vibration_x", "vibration_y", "vibration_z", "vibration_rms",
+    ])
+    for r in rows:
+        writer.writerow([
+            r.timestamp.isoformat() if r.timestamp else "",
+            r.latitude, r.longitude, r.altitude,
+            r.battery_voltage, r.current, r.soc, r.soh, r.temperature,
+            r.vibration_x, r.vibration_y, r.vibration_z, r.vibration_rms,
+        ])
+    buffer.seek(0)
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/api/flights/{flight_id}/export.csv")
+def export_flight_csv(flight_id: int, db: Session = Depends(get_db)):
+    flight = db.query(Flight).filter(Flight.id == flight_id).first()
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+
+    end_time = flight.ended_at or datetime.utcnow()
+    rows = query_telemetry_range(db, flight.uav_id, flight.started_at, end_time)
+
+    label_part = f"_{flight.label}" if flight.label else ""
+    filename = f"flight_{flight.uav_id}_{flight.id}{label_part}.csv".replace(" ", "_")
+    return telemetry_rows_to_csv_response(rows, filename)
+
+
+@app.get("/api/uavs/{uav_id}/telemetry/range")
+def get_telemetry_by_range(uav_id: str, start: datetime, end: datetime, db: Session = Depends(get_db)):
+    """Ad-hoc post-flight query: give any start/end and get back every
+    telemetry row in that window plus summary stats -- independent of
+    whether it was ever marked as a Flight. `start`/`end` are parsed from
+    ISO 8601 query params (send UTC, e.g. with a trailing 'Z')."""
+    if end <= start:
+        raise HTTPException(status_code=400, detail="end must be after start")
+
+    rows = query_telemetry_range(db, uav_id, start, end)
+    duration_seconds = (end.replace(tzinfo=None) - start.replace(tzinfo=None)).total_seconds()
+
+    return {
+        "uav_id": uav_id,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "summary": summarize_telemetry_rows(rows, duration_seconds),
+        "telemetry": [serialize_telemetry(r) for r in rows],
+    }
+
+
+@app.get("/api/uavs/{uav_id}/telemetry/range/export.csv")
+def export_telemetry_range_csv(uav_id: str, start: datetime, end: datetime, db: Session = Depends(get_db)):
+    if end <= start:
+        raise HTTPException(status_code=400, detail="end must be after start")
+    rows = query_telemetry_range(db, uav_id, start, end)
+    filename = f"telemetry_{uav_id}_{start.strftime('%Y%m%dT%H%M%S')}_{end.strftime('%Y%m%dT%H%M%S')}.csv"
+    return telemetry_rows_to_csv_response(rows, filename)
+
+
+@app.get("/api/uavs/{uav_id}/telemetry/export.csv")
+def export_all_telemetry_csv(uav_id: str, db: Session = Depends(get_db)):
+    """Exports all telemetry records ever logged for this UAV as CSV."""
+    rows = (
+        db.query(Telemetry)
+        .filter(Telemetry.uav_id == uav_id)
+        .order_by(Telemetry.timestamp.asc())
+        .all()
+    )
+    filename = f"all_telemetry_{uav_id}_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}.csv"
+    return telemetry_rows_to_csv_response(rows, filename)
 
 
 @app.get("/api/uavs/{uav_id}/command")
