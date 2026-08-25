@@ -41,11 +41,32 @@ function initMap() {
 
 function droneIcon() {
   return L.divIcon({
-    className: "",
-    html: '<div class="drone-marker"></div>',
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    popupAnchor: [0, -8],
+    className: "drone-marker-container",
+    html: `
+      <div class="drone-marker">
+        <svg class="drone-svg" viewBox="0 0 36 36" width="36" height="36" xmlns="http://www.w3.org/2000/svg">
+          <line x1="8" y1="8" x2="28" y2="28" class="drone-arm" />
+          <line x1="28" y1="8" x2="8" y2="28" class="drone-arm" />
+          <circle cx="8" cy="8" r="5" class="drone-rotor" />
+          <circle cx="28" cy="8" r="5" class="drone-rotor" />
+          <circle cx="8" cy="28" r="5" class="drone-rotor" />
+          <circle cx="28" cy="28" r="5" class="drone-rotor" />
+          <circle cx="8" cy="8" r="1.8" class="drone-hub" />
+          <circle cx="28" cy="8" r="1.8" class="drone-hub" />
+          <circle cx="8" cy="28" r="1.8" class="drone-hub" />
+          <circle cx="28" cy="28" r="1.8" class="drone-hub" />
+          <line x1="4.5" y1="8" x2="11.5" y2="8" class="drone-blade" />
+          <line x1="24.5" y1="8" x2="31.5" y2="8" class="drone-blade" />
+          <line x1="4.5" y1="28" x2="11.5" y2="28" class="drone-blade" />
+          <line x1="24.5" y1="28" x2="31.5" y2="28" class="drone-blade" />
+          <circle cx="18" cy="18" r="6" class="drone-body" />
+          <polygon points="18,13 14.5,19 21.5,19" class="drone-heading" />
+        </svg>
+      </div>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
   });
 }
 

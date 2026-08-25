@@ -206,13 +206,61 @@ body {
   color: var(--accent);
 }
 
+.drone-marker-container {
+  background: transparent !important;
+  border: none !important;
+}
+
 .drone-marker {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid #0a0d10;
-  box-shadow: 0 0 10px var(--accent);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 8px var(--accent));
+  transition: transform 0.2s ease;
+}
+
+.drone-marker:hover {
+  transform: scale(1.2);
+}
+
+.drone-svg {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
+.drone-arm {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.drone-rotor {
+  fill: #0a0d10;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+}
+
+.drone-hub {
+  fill: var(--accent);
+}
+
+.drone-blade {
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  opacity: 0.85;
+}
+
+.drone-body {
+  fill: var(--accent);
+  stroke: #0a0d10;
+  stroke-width: 1.5;
+}
+
+.drone-heading {
+  fill: #0a0d10;
 }
 
 /* Leaflet layer control (Dark / Satellite toggle) theming */

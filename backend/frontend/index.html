@@ -1,84 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>UAV Ground Control</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="landing.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAV Ground Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="landing.css" />
 </head>
+
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <span class="brand-mark">◈</span>
-    <span class="brand-text">UAV GROUND CONTROL</span>
-  </div>
-</header>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◈</span>
+      <span class="brand-text">UAV GROUND CONTROL</span>
+    </div>
+  </header>
 
-<main class="landing">
-  <div class="landing-intro">
-    <h1>Choose a view</h1>
-    <p>Monitor fleet health and telemetry, track live drone position, send flight commands, and manage your spares inventory.</p>
-  </div>
+  <main class="landing">
 
-  <div class="card-grid">
+    <div class="landing-hero">
+      <div class="hero-eyebrow">OPERATIONS CENTER</div>
+      <h1 class="hero-title">Ground Control<br><span class="hero-accent">Interface</span></h1>
+      <div class="hero-line"></div>
+    </div>
 
-    <a class="nav-card" href="fleet.html">
-      <div class="nav-card-icon">◈</div>
-      <div class="nav-card-title">Fleet Management</div>
-      <div class="nav-card-desc">
-        Battery health, State of Charge/Health, temperature, and vibration
-        for every registered UAV — with live charts and safety alerts.
-      </div>
-      <div class="nav-card-cta">Open dashboard →</div>
-    </a>
+    <div class="card-grid">
 
-    <a class="nav-card" href="map.html">
-      <div class="nav-card-icon">◎</div>
-      <div class="nav-card-title">Live Map</div>
-      <div class="nav-card-desc">
-        Real-time position of every UAV plotted by GPS latitude, longitude,
-        and altitude from the latest telemetry reading, with a satellite
-        view toggle.
-      </div>
-      <div class="nav-card-cta">Open map →</div>
-    </a>
+      <a class="nav-card card-fleet" href="fleet.html">
+        <div class="nav-card-title">Fleet Management</div>
+      </a>
 
-    <a class="nav-card" href="command.html">
-      <div class="nav-card-icon">▶</div>
-      <div class="nav-card-title">Commanding</div>
-      <div class="nav-card-desc">
-        Send RTL, Hold, or Go-To commands to a UAV — set a destination
-        latitude/longitude and check its current battery percentage before
-        you send it.
-      </div>
-      <div class="nav-card-cta">Open commanding →</div>
-    </a>
+      <a class="nav-card card-map" href="map.html">
+        <div class="nav-card-title">Live Map</div>
+      </a>
 
-    <a class="nav-card" href="inventory.html">
-      <div class="nav-card-icon">▤</div>
-      <div class="nav-card-title">Inventory</div>
-      <div class="nav-card-desc">
-        Type a component or model name to auto-look-up its details and
-        image from the web, then add it to your build/spares inventory.
-      </div>
-      <div class="nav-card-cta">Open inventory →</div>
-    </a>
+      <a class="nav-card card-command" href="command.html">
+        <div class="nav-card-title">Commanding</div>
+      </a>
 
-    <a class="nav-card" href="flights.html">
-      <div class="nav-card-icon">▤</div>
-      <div class="nav-card-title">Telemetry & Flight Logs</div>
-      <div class="nav-card-desc">
-        Review continuous telemetry logs, inspect custom time ranges,
-        analyze flight statistics, and export full raw data history as CSV.
-      </div>
-      <div class="nav-card-cta">Open logs →</div>
-    </a>
+      <a class="nav-card card-inventory" href="inventory.html">
+        <div class="nav-card-title">Inventory</div>
+      </a>
 
-  </div>
-</main>
+      <a class="nav-card card-logs" href="flights.html">
+        <div class="nav-card-title">Flight Logs</div>
+      </a>
+
+    </div>
+  </main>
 
 </body>
+
 </html>

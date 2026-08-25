@@ -627,3 +627,60 @@ body {
   border-radius: 4px;
   white-space: nowrap;
 }
+
+.drone-marker-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+.drone-marker {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 8px var(--accent));
+  transition: transform 0.2s ease;
+}
+
+.drone-marker:hover {
+  transform: scale(1.2);
+}
+
+.drone-svg {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
+.drone-arm {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.drone-rotor {
+  fill: #0a0d10;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+}
+
+.drone-hub {
+  fill: var(--accent);
+}
+
+.drone-blade {
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  opacity: 0.85;
+}
+
+.drone-body {
+  fill: var(--accent);
+  stroke: #0a0d10;
+  stroke-width: 1.5;
+}
+
+.drone-heading {
+  fill: #0a0d10;
+}
