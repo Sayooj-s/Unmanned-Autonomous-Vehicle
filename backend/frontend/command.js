@@ -88,11 +88,11 @@ function setLinkStatus(online) {
   if (online) {
     dot.classList.remove("offline");
     label.classList.remove("offline");
-    label.textContent = "LIVE";
+    label.textContent = "ARMED";
   } else {
     dot.classList.add("offline");
     label.classList.add("offline");
-    label.textContent = "OFFLINE";
+    label.textContent = "DISARMED";
   }
 }
 

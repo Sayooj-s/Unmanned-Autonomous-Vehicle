@@ -249,12 +249,12 @@ function setLinkStatus(online) {
   if (online) {
     dot.classList.remove("offline");
     label.classList.remove("offline");
-    label.textContent = "LIVE";
-    last.textContent = new Date().toLocaleTimeString();
+    label.textContent = "ARMED";
+    if (last) last.textContent = new Date().toLocaleTimeString();
   } else {
     dot.classList.add("offline");
     label.classList.add("offline");
-    label.textContent = "OFFLINE";
+    label.textContent = "DISARMED";
   }
 }
 
