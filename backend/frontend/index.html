@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UAV Ground Control</title>
+  <meta name="description" content="UAV Ground Control Interface — real-time telemetry, fleet management, live maps and mission commanding." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
@@ -19,39 +20,104 @@
       <span class="brand-mark">◈</span>
       <span class="brand-text">UAV GROUND CONTROL</span>
     </div>
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      <span class="status-label">ONLINE</span>
+    </div>
   </header>
 
   <main class="landing">
 
-    <div class="landing-hero">
-      <div class="hero-eyebrow">OPERATIONS CENTER</div>
-      <h1 class="hero-title">Ground Control<br><span class="hero-accent">Interface</span></h1>
-      <div class="hero-line"></div>
+    <!-- ── Left pane: hero + navigation cards ── -->
+    <div class="landing-left">
+
+      <div class="landing-hero">
+        <div class="hero-eyebrow">OPERATIONS CENTER</div>
+        <h1 class="hero-title">Ground Control<br><span class="hero-accent">Interface</span></h1>
+        <div class="hero-line"></div>
+      </div>
+
+      <div class="card-grid">
+
+        <a class="nav-card card-fleet" href="fleet.html" id="nav-fleet">
+          <div class="nav-card-inner">
+            <div class="nav-card-icon">⬡</div>
+            <div class="nav-card-text">
+              <div class="nav-card-title">Fleet Management</div>
+              <div class="nav-card-sub">Manage drones</div>
+            </div>
+          </div>
+          <span class="nav-card-index">01</span>
+        </a>
+
+        <a class="nav-card card-map" href="map.html" id="nav-map">
+          <div class="nav-card-inner">
+            <div class="nav-card-icon">◎</div>
+            <div class="nav-card-text">
+              <div class="nav-card-title">Live Map</div>
+              <div class="nav-card-sub">Real-time tracking</div>
+            </div>
+          </div>
+          <span class="nav-card-index">02</span>
+        </a>
+
+        <a class="nav-card card-command" href="command.html" id="nav-command">
+          <div class="nav-card-inner">
+            <div class="nav-card-icon">⌘</div>
+            <div class="nav-card-text">
+              <div class="nav-card-title">Commanding</div>
+              <div class="nav-card-sub">Mission control</div>
+            </div>
+          </div>
+          <span class="nav-card-index">03</span>
+        </a>
+
+        <a class="nav-card card-inventory" href="inventory.html" id="nav-inventory">
+          <div class="nav-card-inner">
+            <div class="nav-card-icon">▦</div>
+            <div class="nav-card-text">
+              <div class="nav-card-title">Inventory</div>
+              <div class="nav-card-sub">Assets & parts</div>
+            </div>
+          </div>
+          <span class="nav-card-index">04</span>
+        </a>
+
+        <a class="nav-card card-logs" href="flights.html" id="nav-logs">
+          <div class="nav-card-inner">
+            <div class="nav-card-icon">▤</div>
+            <div class="nav-card-text">
+              <div class="nav-card-title">Flight Logs</div>
+              <div class="nav-card-sub">History & telemetry</div>
+            </div>
+          </div>
+          <span class="nav-card-index">05</span>
+        </a>
+
+      </div>
     </div>
 
-    <div class="card-grid">
+    <!-- ── Right pane: drone visual ── -->
+    <div class="landing-right">
+      <div class="drone-grid"></div>
 
-      <a class="nav-card card-fleet" href="fleet.html">
-        <div class="nav-card-title">Fleet Management</div>
-      </a>
+      <!-- HUD corner markers -->
+      <div class="hud-corner tl"></div>
+      <div class="hud-corner br"></div>
 
-      <a class="nav-card card-map" href="map.html">
-        <div class="nav-card-title">Live Map</div>
-      </a>
+      <!-- Floating spec tags -->
+      <div class="spec-tag">4K / 60fps</div>
+      <div class="spec-tag">12 km range</div>
+      <div class="spec-tag">34 min flight</div>
 
-      <a class="nav-card card-command" href="command.html">
-        <div class="nav-card-title">Commanding</div>
-      </a>
-
-      <a class="nav-card card-inventory" href="inventory.html">
-        <div class="nav-card-title">Inventory</div>
-      </a>
-
-      <a class="nav-card card-logs" href="flights.html">
-        <div class="nav-card-title">Flight Logs</div>
-      </a>
-
+      <img
+        src="drone.png"
+        alt="DJI Air 2S UAV"
+        class="drone-image"
+        id="drone-visual"
+      />
     </div>
+
   </main>
 
 </body>
