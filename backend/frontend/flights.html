@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flight Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="flights.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <a href="index.html" class="back-link">← Home</a>
+    <span class="brand-sep">/</span>
+    <span class="brand-mark">▤</span>
+    <span class="brand-text">FLIGHT LOG</span>
+  </div>
+  <div class="link-status" id="linkStatus">
+    <span class="pulse-dot" id="pulseDot"></span>
+    <span id="linkLabel">CONNECTING…</span>
+  </div>
+</header>
+
+<main class="fl-main">
+
+  <div class="fl-filter-row">
+    <label class="field-label" for="uavFilter">Filter by UAV</label>
+    <select id="uavFilter" class="field-select">
+      <option value="">All UAVs</option>
+    </select>
+  </div>
+
+  <section class="range-box">
+    <div class="range-header">Custom Date/Time Range</div>
+    <div class="range-fields">
+      <div class="field-group">
+        <label class="field-label" for="rangeUav">UAV</label>
+        <select id="rangeUav" class="field-select">
+          <option value="">Select a UAV…</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="rangeStart">Start</label>
+        <input class="field-input" type="datetime-local" id="rangeStart" />
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="rangeEnd">End</label>
+        <input class="field-input" type="datetime-local" id="rangeEnd" />
+      </div>
+    </div>
+    <div class="range-actions">
+      <button class="btn-range" id="rangeQueryBtn">View Summary</button>
+      <a class="btn-export" id="rangeExportBtn" href="#" style="display:none;" download>Export CSV</a>
+    </div>
+    <div class="range-status" id="rangeStatus"></div>
+    <div class="range-result" id="rangeResult" style="display:none;">
+      <div class="fl-stats" id="rangeStats"></div>
+    </div>
+  </section>
+
+  <div class="fl-list-wrap">
+    <div class="fl-list-header">
+      <span>FLIGHTS</span>
+      <span class="fl-count" id="flCount">0</span>
+    </div>
+    <div class="fl-list" id="flList"><!-- rows injected here --></div>
+    <div class="fl-empty" id="flEmpty">No flights recorded yet. Start one from the Commanding page.</div>
+  </div>
+
+</main>
+
+<script src="flights.js"></script>
+</body>
+</html>
