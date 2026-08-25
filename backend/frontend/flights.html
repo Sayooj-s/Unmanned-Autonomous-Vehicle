@@ -52,7 +52,8 @@
     </div>
     <div class="range-actions">
       <button class="btn-range" id="rangeQueryBtn">View Summary</button>
-      <a class="btn-export" id="rangeExportBtn" href="#" style="display:none;" download>Export CSV</a>
+      <a class="btn-export" id="rangeExportBtn" href="#" style="display:none;" download>Export Range CSV</a>
+      <a class="btn-export" id="allExportBtn" href="#" style="display:none;" download>⬇ Export All Logs (Full History)</a>
     </div>
     <div class="range-status" id="rangeStatus"></div>
     <div class="range-result" id="rangeResult" style="display:none;">
@@ -66,7 +67,7 @@
       <span class="fl-count" id="flCount">0</span>
     </div>
     <div class="fl-list" id="flList"><!-- rows injected here --></div>
-    <div class="fl-empty" id="flEmpty">No flights recorded yet. Start one from the Commanding page.</div>
+    <div class="fl-empty" id="flEmpty">No marked flights found. Use the date/time range query above to inspect and export logs.</div>
   </div>
 
 </main>

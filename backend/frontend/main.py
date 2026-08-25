@@ -737,6 +737,19 @@ def export_telemetry_range_csv(uav_id: str, start: datetime, end: datetime, db: 
     return telemetry_rows_to_csv_response(rows, filename)
 
 
+@app.get("/api/uavs/{uav_id}/telemetry/export.csv")
+def export_all_telemetry_csv(uav_id: str, db: Session = Depends(get_db)):
+    """Exports all telemetry records ever logged for this UAV as CSV."""
+    rows = (
+        db.query(Telemetry)
+        .filter(Telemetry.uav_id == uav_id)
+        .order_by(Telemetry.timestamp.asc())
+        .all()
+    )
+    filename = f"all_telemetry_{uav_id}_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}.csv"
+    return telemetry_rows_to_csv_response(rows, filename)
+
+
 @app.get("/api/uavs/{uav_id}/command")
 def get_command(uav_id: str, db: Session = Depends(get_db)):
     """Polled by the companion computer (e.g. Jetson) to check whether it

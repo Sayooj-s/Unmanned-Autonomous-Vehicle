@@ -57,10 +57,26 @@ async function populateUavFilter() {
       `<option value="${u.uav_id}">${u.name || u.uav_id} (${u.uav_id})</option>`
     ).join("");
     if (prevRange) rangeSelect.value = prevRange;
+    updateAllExportBtn();
   } catch (e) {
     // Non-fatal -- the flight list itself still works without these populated.
   }
 }
+
+function updateAllExportBtn() {
+  const rangeUav = document.getElementById("rangeUav");
+  const allBtn = document.getElementById("allExportBtn");
+  if (rangeUav && allBtn) {
+    if (rangeUav.value) {
+      allBtn.href = `/api/uavs/${encodeURIComponent(rangeUav.value)}/telemetry/export.csv`;
+      allBtn.style.display = "inline-block";
+    } else {
+      allBtn.style.display = "none";
+    }
+  }
+}
+
+document.getElementById("rangeUav").addEventListener("change", updateAllExportBtn);
 
 function renderFlights(flights) {
   const list = document.getElementById("flList");
