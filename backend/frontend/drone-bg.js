@@ -51,16 +51,18 @@
   });
 
   // ---------------------------------------------------------------------
-  // Scroll-based fade: canvas opacity goes 1 → 0 as user scrolls
-  // through the first viewport height
+  // Scroll-based fade: canvas opacity smoothly lerps 1 → 0 as the user
+  // scrolls through the first viewport height. CSS transition on the
+  // canvas handles the smoothing between rAF ticks.
   // ---------------------------------------------------------------------
+  let targetOpacity = 1;
+
   function updateCanvasOpacity() {
     const scrollY = window.scrollY || window.pageYOffset;
-    const fadeRange = window.innerHeight * 0.8;
-    const opacity = Math.max(0, 1 - (scrollY / fadeRange));
-    canvas.style.opacity = opacity;
-    // Also disable pointer-events and rendering when fully hidden
-    canvas.style.visibility = opacity === 0 ? 'hidden' : 'visible';
+    const fadeRange = window.innerHeight * 0.75;
+    targetOpacity = Math.max(0, 1 - (scrollY / fadeRange));
+    canvas.style.opacity = targetOpacity;
+    canvas.style.visibility = targetOpacity === 0 ? 'hidden' : 'visible';
   }
   updateCanvasOpacity();
   window.addEventListener('scroll', updateCanvasOpacity, { passive: true });

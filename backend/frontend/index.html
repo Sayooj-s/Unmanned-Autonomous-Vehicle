@@ -118,7 +118,7 @@
         if (entry.isIntersecting) {
           // slight stagger per card index
           const idx = Array.from(cards).indexOf(entry.target);
-          entry.target.style.transitionDelay = `${idx * 60}ms`;
+          entry.target.style.transitionDelay = `${idx * 100}ms`;
           entry.target.classList.add('card-visible');
           cardObserver.unobserve(entry.target);
         }
