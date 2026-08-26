@@ -206,12 +206,12 @@ body {
 }
 
 .hero-title {
-  font-size: clamp(58px, 9vw, 110px);
+  font-size: clamp(48px, 7vw, 90px);
   font-weight: 700;
   line-height: 0.95;
   letter-spacing: -0.04em;
   color: #ffffff;
-  text-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
 .hero-accent {
