@@ -417,8 +417,8 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px 22px;
+  justify-content: center;
+  padding: 0 24px;
   text-decoration: none;
   color: var(--text);
   background: rgba(12, 16, 20, 0.6);
@@ -426,7 +426,7 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
-  min-height: 92px;
+  min-height: 110px;
   overflow: hidden;
   cursor: pointer;
 
@@ -501,10 +501,11 @@ body {
 }
 
 .nav-card-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text);
+  text-align: center;
   line-height: 1.2;
   transition: color 0.2s ease;
 }
