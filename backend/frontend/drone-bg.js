@@ -40,6 +40,18 @@
   // Lighting -- dim ambient + accent-colored point lights, matching the
   // app's green/cyan neon-on-dark palette
   // ---------------------------------------------------------------------
+  let mouseX = 0;
+  let mouseY = 0;
+  let targetX = 0;
+  let targetY = 0;
+
+  const windowHalfX = window.innerWidth / 2;
+  const windowHalfY = window.innerHeight / 2;
+
+  document.addEventListener('mousemove', (event) => {
+    mouseX = (event.clientX - windowHalfX);
+    mouseY = (event.clientY - windowHalfY);
+  });
   scene.add(new THREE.AmbientLight(0x1a2530, 1.2));
 
   const greenLight = new THREE.PointLight(0x39ff88, 14, 20);
@@ -60,14 +72,14 @@
   const drone = new THREE.Group();
 
   const bodyMat = new THREE.MeshStandardMaterial({
-    color: 0x1a2128,
-    metalness: 0.6,
-    roughness: 0.35,
+    color: 0x0a0c10,
+    metalness: 0.85,
+    roughness: 0.15,
   });
   const armMat = new THREE.MeshStandardMaterial({
-    color: 0x141a20,
-    metalness: 0.5,
-    roughness: 0.4,
+    color: 0x050608,
+    metalness: 0.9,
+    roughness: 0.25,
   });
   const accentMat = new THREE.MeshStandardMaterial({
     color: 0x39ff88,
@@ -150,15 +162,22 @@
   // Slight tilt so it doesn't read as perfectly flat/top-down
   drone.rotation.x = 0.18;
 
+  let baseDroneY = 0;
+
   function updateDronePosition() {
     if (window.innerWidth <= 768) {
-      // On mobile, center the drone and push it up and back
-      drone.position.set(0, 4, -5); 
+      // On mobile, center the drone
+      drone.position.set(0, 0, -2); 
+      baseDroneY = 0;
     } else {
-      drone.position.set(3.8, 0.5, -1.5); // offset further to the right, and placed slightly higher
+      drone.position.set(0, 0, 0); // Center on screen
+      baseDroneY = 0;
     }
   }
   updateDronePosition();
+
+  // Make the drone larger
+  drone.scale.set(3, 3, 3);
 
   scene.add(drone);
 
@@ -171,9 +190,15 @@
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
 
+    targetX = mouseX * 0.001;
+    targetY = mouseY * 0.001;
+
     if (!prefersReducedMotion) {
-      drone.rotation.y = t * 0.25;                 // slow turntable rotation
-      drone.position.y = 0.5 + Math.sin(t * 0.8) * 0.15; // gentle hover bob
+      drone.rotation.y = (t * 0.15) + (targetX * 0.5);                 // slow turntable rotation + mouse
+      drone.rotation.x = 0.18 + (targetY * 0.5);                       // base tilt + mouse
+      drone.position.y = baseDroneY + Math.sin(t * 0.8) * 0.15 - (targetY * 0.5); // gentle hover bob + mouse
+      drone.position.x = targetX * 1.5;                                // subtle parallax
+      
       propellers.forEach((p, i) => {
         p.rotation.y += 0.55 + i * 0.03;            // fast propeller spin
       });
