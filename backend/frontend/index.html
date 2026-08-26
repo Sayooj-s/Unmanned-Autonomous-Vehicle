@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UAV Ground Control</title>
+  <meta name="description" content="Unmanned Aerial Vehicle Ground Control Interface — fleet management, live map, commanding, and flight logs.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
@@ -14,50 +15,185 @@
 
 <body>
 
+  <!-- Fixed 3D drone canvas — only visible in hero section -->
   <canvas id="drone-bg"></canvas>
 
+  <!-- Topbar floats above both sections -->
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark">◈</span>
       <span class="brand-text">UAV GROUND CONTROL</span>
     </div>
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      <span class="status-label">SYSTEM ONLINE</span>
+    </div>
   </header>
 
-  <main class="landing">
+  <!-- ═══ SECTION 1: Full-screen drone hero ═══ -->
+  <section class="hero-section" id="hero">
+    <div class="hero-vignette"></div>
+    <div class="hero-glow"></div>
 
-    <div class="landing-hero">
-      <div class="hero-eyebrow">OPERATIONS CENTER</div>
-      <h1 class="hero-title">Ground Control<br><span class="hero-accent">Interface</span></h1>
-      <div class="hero-line"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">
+        <span class="eyebrow-pulse"></span>
+        UNMANNED AERIAL SYSTEMS · OPERATIONS CENTER
+      </div>
+
+      <h1 class="hero-title">
+        Ground<br><span class="hero-accent">Control</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Unified telemetry, commanding, and fleet intelligence<br>
+        for autonomous UAV operations at scale.
+      </p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="stat-value stat-live">LIVE</span>
+          <span class="stat-label">Telemetry</span>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="stat-value">5</span>
+          <span class="stat-label">Modules</span>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="stat-value">RT</span>
+          <span class="stat-label">Comms</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Animated scroll cue -->
+    <button class="scroll-cue" id="scroll-cue" aria-label="Scroll to modules">
+      <span class="scroll-cue-label">EXPLORE MODULES</span>
+      <div class="scroll-cue-chevron">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M3 6l6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </button>
+
+    <!-- HUD corner brackets -->
+    <div class="hud-corner hud-tl"></div>
+    <div class="hud-corner hud-tr"></div>
+    <div class="hud-corner hud-bl"></div>
+    <div class="hud-corner hud-br"></div>
+  </section>
+
+  <!-- ═══ SECTION 2: Navigation cards ═══ -->
+  <section class="nav-section" id="modules">
+
+    <div class="nav-section-header">
+      <div class="nav-eyebrow">SELECT MODULE</div>
+      <h2 class="nav-title">Mission Control</h2>
+      <div class="nav-line"></div>
     </div>
 
     <div class="card-grid">
 
       <a class="nav-card card-fleet" href="fleet.html">
-        <div class="nav-card-title">Fleet Management</div>
+        <div class="nav-card-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Fleet Management</div>
+          <div class="nav-card-sub">Monitor all UAVs</div>
+        </div>
+        <div class="nav-card-arrow">→</div>
       </a>
 
       <a class="nav-card card-map" href="map.html">
-        <div class="nav-card-title">Live Map</div>
+        <div class="nav-card-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Live Map</div>
+          <div class="nav-card-sub">Real-time positioning</div>
+        </div>
+        <div class="nav-card-arrow">→</div>
       </a>
 
       <a class="nav-card card-command" href="command.html">
-        <div class="nav-card-title">Commanding</div>
+        <div class="nav-card-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Commanding</div>
+          <div class="nav-card-sub">Send mission commands</div>
+        </div>
+        <div class="nav-card-arrow">→</div>
       </a>
 
       <a class="nav-card card-inventory" href="inventory.html">
-        <div class="nav-card-title">Inventory</div>
+        <div class="nav-card-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Inventory</div>
+          <div class="nav-card-sub">Parts &amp; components</div>
+        </div>
+        <div class="nav-card-arrow">→</div>
       </a>
 
       <a class="nav-card card-logs" href="flights.html">
-        <div class="nav-card-title">Flight Logs</div>
+        <div class="nav-card-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Flight Logs</div>
+          <div class="nav-card-sub">History &amp; analytics</div>
+        </div>
+        <div class="nav-card-arrow">→</div>
       </a>
 
     </div>
-  </main>
+
+    <footer class="page-footer">
+      <span class="footer-mono">UAV-GCS · v1.0.0</span>
+      <span class="footer-sep">·</span>
+      <span class="footer-mono">STATUS: <span class="footer-live">NOMINAL</span></span>
+    </footer>
+
+  </section>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="drone-bg.js"></script>
+  <script>
+    // Scroll cue — smooth scroll to modules section
+    document.getElementById('scroll-cue').addEventListener('click', () => {
+      document.getElementById('modules').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // Staggered card entrance animation on scroll
+    const cards = document.querySelectorAll('.nav-card');
+    const cardObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          // slight stagger per card index
+          const idx = Array.from(cards).indexOf(entry.target);
+          entry.target.style.transitionDelay = `${idx * 60}ms`;
+          entry.target.classList.add('card-visible');
+          cardObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    cards.forEach(c => cardObserver.observe(c));
+  </script>
 
 </body>
 
