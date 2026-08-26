@@ -149,7 +149,17 @@
 
   // Slight tilt so it doesn't read as perfectly flat/top-down
   drone.rotation.x = 0.18;
-  drone.position.set(3.8, 0.5, -1.5); // offset further to the right, and placed slightly higher
+
+  function updateDronePosition() {
+    if (window.innerWidth <= 768) {
+      // On mobile, center the drone and push it up and back
+      drone.position.set(0, 4, -5); 
+    } else {
+      drone.position.set(3.8, 0.5, -1.5); // offset further to the right, and placed slightly higher
+    }
+  }
+  updateDronePosition();
+
   scene.add(drone);
 
   // ---------------------------------------------------------------------
@@ -180,5 +190,6 @@
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    updateDronePosition();
   });
 })();
