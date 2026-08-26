@@ -51,21 +51,61 @@
   });
 
   // ---------------------------------------------------------------------
-  // Scroll-based fade: canvas opacity smoothly lerps 1 → 0 as the user
-  // scrolls through the first viewport height. CSS transition on the
-  // canvas handles the smoothing between rAF ticks.
+  // Scroll-based fade: canvas, hero content, scroll cue, and HUD corners
+  // smoothly fade out as the user scrolls down section 1.
   // ---------------------------------------------------------------------
   let targetOpacity = 1;
 
-  function updateCanvasOpacity() {
+  const heroContent = document.querySelector('.hero-content');
+  const scrollCue = document.getElementById('scroll-cue');
+  const hudTL = document.querySelector('.hud-tl');
+  const hudTR = document.querySelector('.hud-tr');
+  const hudBL = document.querySelector('.hud-bl');
+  const hudBR = document.querySelector('.hud-br');
+  const heroGlow = document.querySelector('.hero-glow');
+
+  function updateScrollFade() {
     const scrollY = window.scrollY || window.pageYOffset;
-    const fadeRange = window.innerHeight * 0.75;
-    targetOpacity = Math.max(0, 1 - (scrollY / fadeRange));
+    const vh = window.innerHeight;
+
+    // 1. Drone 3D Canvas fade
+    const canvasFadeRange = vh * 0.75;
+    targetOpacity = Math.max(0, 1 - (scrollY / canvasFadeRange));
     canvas.style.opacity = targetOpacity;
     canvas.style.visibility = targetOpacity === 0 ? 'hidden' : 'visible';
+
+    // 2. Scroll cue (bottom element of section 1) — fades out quickly on scroll
+    if (scrollCue) {
+      const cueOpacity = Math.max(0, 1 - (scrollY / (vh * 0.2)));
+      scrollCue.style.opacity = cueOpacity;
+      scrollCue.style.transform = `translate(-50%, ${scrollY * 0.3}px)`;
+      scrollCue.style.pointerEvents = cueOpacity < 0.1 ? 'none' : 'auto';
+    }
+
+    // 3. Bottom HUD corners (bl, br) — fade out quickly as section 2 approaches
+    if (hudBL) hudBL.style.opacity = Math.max(0, 0.35 * (1 - (scrollY / (vh * 0.22))));
+    if (hudBR) hudBR.style.opacity = Math.max(0, 0.35 * (1 - (scrollY / (vh * 0.22))));
+
+    // 4. Top HUD corners (tl, tr) — fade out progressively
+    if (hudTL) hudTL.style.opacity = Math.max(0, 0.35 * (1 - (scrollY / (vh * 0.45))));
+    if (hudTR) hudTR.style.opacity = Math.max(0, 0.35 * (1 - (scrollY / (vh * 0.45))));
+
+    // 5. Hero text content — smooth fade out and float up
+    if (heroContent) {
+      const contentOpacity = Math.max(0, 1 - (scrollY / (vh * 0.55)));
+      const contentY = scrollY * -0.22;
+      heroContent.style.opacity = contentOpacity;
+      heroContent.style.transform = `translateY(${contentY}px)`;
+    }
+
+    // 6. Hero atmospheric background glow — subtle fade out
+    if (heroGlow) {
+      heroGlow.style.opacity = Math.max(0, 1 - (scrollY / (vh * 0.6)));
+    }
   }
-  updateCanvasOpacity();
-  window.addEventListener('scroll', updateCanvasOpacity, { passive: true });
+
+  updateScrollFade();
+  window.addEventListener('scroll', updateScrollFade, { passive: true });
 
   // ---------------------------------------------------------------------
   // Lighting
@@ -230,7 +270,7 @@
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     updateDronePosition();
-    updateCanvasOpacity();
+    updateScrollFade();
   });
 })();
 

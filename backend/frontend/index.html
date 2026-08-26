@@ -21,8 +21,10 @@
   <!-- Topbar floats above both sections -->
   <header class="topbar">
     <div class="brand">
-      <span class="brand-mark">◈</span>
-      <span class="brand-text">UAV GROUND CONTROL</span>
+      <a href="#modules" class="brand-home-link">
+        <span class="brand-mark">◈</span>
+        <span class="brand-text">UAV GROUND CONTROL</span>
+      </a>
     </div>
   </header>
 
@@ -110,6 +112,14 @@
     document.getElementById('scroll-cue').addEventListener('click', () => {
       document.getElementById('modules').scrollIntoView({ behavior: 'smooth' });
     });
+
+    // Auto-scroll to #modules when returning from a module page
+    if (window.location.hash === '#modules') {
+      // Small delay lets the browser/drone canvas finish initial paint
+      setTimeout(() => {
+        document.getElementById('modules').scrollIntoView({ behavior: 'smooth' });
+      }, 120);
+    }
 
     // Staggered card entrance animation on scroll
     const cards = document.querySelectorAll('.nav-card');

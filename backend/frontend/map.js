@@ -16,19 +16,20 @@ function initMap() {
     maxZoom: 19,
   }).addTo(map);
 
-  // Satellite imagery (Esri World Imagery)
+  // Satellite / terrain layer (free, no API key)
   const satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
       attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
-      maxZoom: 19,
+      maxZoom: 18,
+      maxNativeZoom: 17,  // Esri caps free access here — prevents the 'API required' overlay
     }
   );
 
   // Optional place-name/road labels to overlay on top of the satellite imagery
   const satelliteLabels = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-    { maxZoom: 19, pane: "shadowPane" }
+    { maxZoom: 18, maxNativeZoom: 17, pane: "shadowPane" }
   );
   const satelliteGroup = L.layerGroup([satelliteLayer, satelliteLabels]);
 

@@ -50,13 +50,18 @@ function makeLineChart(canvasId, datasets) {
 function initCharts() {
   charts.battery = makeLineChart("chartBattery", [
     { label: "Voltage (V)", data: [], borderColor: "#5ec8d8", backgroundColor: "transparent", tension: 0.3, pointRadius: 0, yAxisID: "y" },
-    { label: "SoC (%)", data: [], borderColor: "#39ff88", backgroundColor: "transparent", tension: 0.3, pointRadius: 0, yAxisID: "y1" },
+    { label: "Current (A)", data: [], borderColor: "#f2b134", backgroundColor: "transparent", tension: 0.3, pointRadius: 0, yAxisID: "y1" },
   ]);
   charts.battery.options.scales.y1 = {
     position: "right",
     ticks: { color: "#6b7680", font: { family: "IBM Plex Mono", size: 10 } },
     grid: { display: false },
   };
+
+  charts.soc = makeLineChart("chartSoc", [
+    { label: "SoC (%)", data: [], borderColor: "#39ff88", backgroundColor: "transparent", tension: 0.3, pointRadius: 0 },
+    { label: "SoH (%)", data: [], borderColor: "#a78bfa", backgroundColor: "transparent", tension: 0.3, pointRadius: 0 },
+  ]);
 
   charts.temp = makeLineChart("chartTemp", [
     { label: "Temp (°C)", data: [], borderColor: "#f2b134", backgroundColor: "rgba(242,177,52,0.08)", fill: true, tension: 0.3, pointRadius: 0 },
@@ -75,8 +80,13 @@ function updateCharts(rows) {
 
   charts.battery.data.labels = labels;
   charts.battery.data.datasets[0].data = rows.map(r => r.battery_voltage);
-  charts.battery.data.datasets[1].data = rows.map(r => r.soc);
+  charts.battery.data.datasets[1].data = rows.map(r => r.current);
   charts.battery.update();
+
+  charts.soc.data.labels = labels;
+  charts.soc.data.datasets[0].data = rows.map(r => r.soc);
+  charts.soc.data.datasets[1].data = rows.map(r => r.soh);
+  charts.soc.update();
 
   charts.temp.data.labels = labels;
   charts.temp.data.datasets[0].data = rows.map(r => r.temperature);
