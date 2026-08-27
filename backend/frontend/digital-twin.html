@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UAV Digital Twin — 3D Flight View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="digital-twin.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <a href="index.html#modules" class="back-link">← Home</a>
+    <span class="brand-sep">/</span>
+    <span class="brand-mark">◈</span>
+    <span class="brand-text">DIGITAL TWIN — 3D FLIGHT VIEW</span>
+  </div>
+  <div class="link-status" id="linkStatus">
+    <span class="pulse-dot" id="pulseDot"></span>
+    <span id="linkLabel">CONNECTING…</span>
+    <span class="link-sep">·</span>
+    <span id="lastUpdate">—</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="fleet-panel">
+    <div class="fleet-header">
+      <span>FLEET</span>
+      <span class="fleet-count" id="fleetCount">0</span>
+    </div>
+    <div class="fleet-list" id="fleetList">
+      <!-- UAV cards injected here -->
+    </div>
+    <div class="fleet-empty" id="fleetEmpty">
+      No UAVs registered yet.<br/>
+      Post telemetry to <code>/api/uavs/{uav_id}/telemetry</code> to add one.
+    </div>
+  </aside>
+
+  <main class="twin-panel">
+
+    <div class="no-selection" id="noSelection">
+      <div class="no-selection-glyph">▵</div>
+      <p>Select a UAV from the fleet list to fly its digital twin through the real world.</p>
+    </div>
+
+    <div class="twin-content" id="twinContent" style="display:none;">
+
+      <div class="twin-heading">
+        <div>
+          <h1 id="twinName">—</h1>
+          <span class="detail-id" id="twinId">—</span>
+        </div>
+        <button class="btn-follow" id="followBtn">
+          <span id="followLabel">FOLLOW: ON</span>
+        </button>
+      </div>
+
+      <div class="alert-banner" id="twinAlertBanner" style="display:none;">
+        <span class="alert-icon" id="twinAlertIcon">⚠</span>
+        <div class="alert-text">
+          <div class="alert-title" id="twinAlertTitle">—</div>
+          <ul class="alert-reasons" id="twinAlertReasons"></ul>
+        </div>
+        <span class="alert-command" id="twinAlertCommand"></span>
+      </div>
+
+      <div class="twin-stage-wrap">
+        <div id="twin3dMap"></div>
+
+        <div class="no-gps-overlay" id="noGpsOverlay">
+          No GPS fix yet for this UAV — waiting for a position report…
+        </div>
+
+        <div class="twin-hud twin-hud-left">
+          <div class="hud-chip" data-metric="soc">
+            <span class="hud-chip-label">SoC</span>
+            <span class="hud-chip-value"><span id="twinSoc">—</span>%</span>
+          </div>
+          <div class="hud-chip" data-metric="alt">
+            <span class="hud-chip-label">Altitude</span>
+            <span class="hud-chip-value"><span id="twinAlt">—</span>m</span>
+          </div>
+          <div class="hud-chip" data-metric="temp">
+            <span class="hud-chip-label">Temp</span>
+            <span class="hud-chip-value"><span id="twinTemp">—</span>°C</span>
+          </div>
+        </div>
+
+        <div class="twin-hud twin-hud-right">
+          <div class="hud-chip" data-metric="current">
+            <span class="hud-chip-label">Current</span>
+            <span class="hud-chip-value"><span id="twinCurrent">—</span>A</span>
+          </div>
+          <div class="hud-chip" data-metric="vib">
+            <span class="hud-chip-label">Vibration</span>
+            <span class="hud-chip-value"><span id="twinVib">—</span>g</span>
+          </div>
+          <div class="hud-chip" data-metric="volt">
+            <span class="hud-chip-label">Voltage</span>
+            <span class="hud-chip-value"><span id="twinVolt">—</span>V</span>
+          </div>
+        </div>
+
+        <div class="twin-footnote">
+          Terrain &amp; buildings are real OpenStreetMap data · camera chases the live GPS + altitude fix ·
+          updated <span id="twinUpdated">—</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<script src="digital-twin.js"></script>
+</body>
+</html>

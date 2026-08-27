@@ -26,6 +26,9 @@
   --red:         #ff4757;
   --red-dim:     #7a2030;
   --red-glow:    rgba(255, 71, 87, 0.12);
+  --twin:        #4da6ff;
+  --twin-dim:    #2a5a8a;
+  --twin-glow:   rgba(77, 166, 255, 0.14);
   --mono:        'IBM Plex Mono', ui-monospace, monospace;
   --sans:        'Inter', system-ui, sans-serif;
 }
@@ -583,6 +586,12 @@ body {
 .card-logs:hover   { border-color: rgba(255,71,87,0.2); box-shadow: 0 12px 40px rgba(255,71,87,0.06); }
 .card-logs:hover .nav-card-icon  { color: var(--red); background: rgba(255,71,87,0.08); border-color: rgba(255,71,87,0.18); }
 .card-logs:hover .nav-card-title { color: var(--red); }
+
+.card-twin::before { background: radial-gradient(ellipse at 20% 50%, var(--twin-glow) 0%, transparent 65%); }
+.card-twin::after  { background: linear-gradient(90deg, var(--twin), transparent); }
+.card-twin:hover   { border-color: rgba(77,166,255,0.2); box-shadow: 0 12px 40px rgba(77,166,255,0.06); }
+.card-twin:hover .nav-card-icon  { color: var(--twin); background: rgba(77,166,255,0.08); border-color: rgba(77,166,255,0.18); }
+.card-twin:hover .nav-card-title { color: var(--twin); }
 
 /* ── Footer ── */
 .page-footer {
