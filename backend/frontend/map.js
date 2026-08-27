@@ -9,15 +9,22 @@ function initMap() {
   map = L.map("map", { zoomControl: true, attributionControl: true })
     .setView([20.5937, 78.9629], 4); // neutral default view until real data arrives
 
-  // CartoDB Dark Matter — professional dark basemap, no API key needed
+  // Esri Dark Gray Canvas — professional dark basemap, free, no API key
   const darkLayer = L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
     {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20,
+      attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+      maxZoom: 16,
+      maxNativeZoom: 16,
     }
   ).addTo(map);
+
+  // Esri Dark Gray Reference labels (roads, place names) layered on top
+  const darkLabels = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 16, maxNativeZoom: 16, pane: "shadowPane" }
+  );
+  const darkGroup = L.layerGroup([darkLayer, darkLabels]);
 
   // Esri World Imagery (satellite), free, no API key
   const satelliteLayer = L.tileLayer(
@@ -37,10 +44,11 @@ function initMap() {
   const satelliteGroup = L.layerGroup([satelliteLayer, satelliteLabels]);
 
   L.control.layers(
-    { "Dark": darkLayer, "Satellite": satelliteGroup },
+    { "Dark": darkGroup, "Satellite": satelliteGroup },
     {},
     { position: "topright", collapsed: false }
   ).addTo(map);
+  darkGroup.addTo(map);
 }
 
 function droneIcon() {
