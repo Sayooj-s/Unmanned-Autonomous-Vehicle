@@ -4,8 +4,11 @@ const POLL_MS = 3000;
 let map;
 let uavMarker = null;
 let destMarker = null;
+let homeMarker = null;
 let uavsCache = [];
-let selectedUavId = "";
+let selectedUavId = sessionStorage.getItem("cmd_selectedUavId") || "";
+let commandSending = false; // true while a command POST is in-flight
+let mapClickLocked = false;  // true while a UAV has an active pending command
 
 function droneIcon() {
   return L.divIcon({
@@ -47,13 +50,29 @@ function destIcon() {
   });
 }
 
+function baseIcon() {
+  return L.divIcon({
+    className: "base-marker-container",
+    html: `
+      <div class="base-marker" style="background: rgba(167, 139, 250, 0.2); border-radius: 50%; padding: 4px; display: inline-block;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#a78bfa" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3l10 9h-3v9h-14v-9h-3l10-9z"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+}
+
 function initMap() {
   map = L.map("cmdMap", { zoomControl: true }).setView([20.5937, 78.9629], 4);
 
-  const darkLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
-    subdomains: "abcd",
+  const darkLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19,
+    className: 'dark-map-tiles'
   }).addTo(map);
 
   const satelliteLayer = L.tileLayer(
@@ -61,6 +80,7 @@ function initMap() {
     {
       attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
       maxZoom: 19,
+      maxNativeZoom: 17,
     }
   );
 
@@ -71,6 +91,7 @@ function initMap() {
   ).addTo(map);
 
   map.on("click", (e) => {
+    if (commandSending || mapClickLocked) return; // block map clicks while sending or command is active
     setDestination(e.latlng.lat, e.latlng.lng);
   });
 }
@@ -79,6 +100,8 @@ function setDestination(lat, lon) {
   document.getElementById("latInput").value = lat.toFixed(6);
   document.getElementById("lonInput").value = lon.toFixed(6);
   document.getElementById("commandSelect").value = "GOTO";
+  sessionStorage.setItem("cmd_lat", lat.toFixed(6));
+  sessionStorage.setItem("cmd_lon", lon.toFixed(6));
   updateFormMode();
 
   if (destMarker) {
@@ -93,6 +116,17 @@ function setDestination(lat, lon) {
       document.getElementById("lonInput").value = ll.lng.toFixed(6);
     });
   }
+}
+
+function clearDestination() {
+  if (destMarker) {
+    map.removeLayer(destMarker);
+    destMarker = null;
+  }
+  document.getElementById("latInput").value = "";
+  document.getElementById("lonInput").value = "";
+  sessionStorage.removeItem("cmd_lat");
+  sessionStorage.removeItem("cmd_lon");
 }
 
 async function fetchJSON(path, opts) {
@@ -120,15 +154,26 @@ function setLinkStatus(online) {
 
 function populateUavSelect(uavs) {
   const select = document.getElementById("uavSelect");
-  const prevValue = select.value;
   select.innerHTML = '<option value="">Select a UAV…</option>' + uavs.map(u =>
     `<option value="${u.uav_id}">${u.name || u.uav_id} (${u.uav_id})</option>`
   ).join("");
-  if (prevValue && uavs.some(u => u.uav_id === prevValue)) {
-    select.value = prevValue;
+
+  if (selectedUavId && uavs.some(u => u.uav_id === selectedUavId)) {
+    // Restore previously selected UAV (survives Home/Back navigation)
+    select.value = selectedUavId;
+    const uav = uavs.find(u => u.uav_id === selectedUavId);
+    if (uav) renderUavState(uav);
+  } else if (selectedUavId && !uavs.some(u => u.uav_id === selectedUavId)) {
+    // UAV was deleted — clear stale session state
+    selectedUavId = "";
+    sessionStorage.removeItem("cmd_selectedUavId");
+    document.getElementById("cmdEmpty").style.display = "block";
+    document.getElementById("cmdContent").style.display = "none";
   } else if (!selectedUavId && uavs.length > 0) {
+    // Nothing selected yet — pick the first UAV automatically
     selectedUavId = uavs[0].uav_id;
     select.value = selectedUavId;
+    sessionStorage.setItem("cmd_selectedUavId", selectedUavId);
     const uav = uavs.find(u => u.uav_id === selectedUavId);
     if (uav) renderUavState(uav);
   }
@@ -159,6 +204,22 @@ function renderUavState(uav) {
     destRow.style.display = "none";
   }
 
+  // Lock map clicks when a command is active; unlock when cleared
+  const hasActiveCmd = uav.pending_command && uav.pending_command !== "NONE";
+  mapClickLocked = hasActiveCmd;
+  const mapLayerHint = document.getElementById("mapLayerHint");
+  const mapHint = document.getElementById("mapHint");
+  if (hasActiveCmd) {
+    if (mapLayerHint) {
+      mapLayerHint.textContent = `Command active (${uav.pending_command}) — clear it before setting a new destination.`;
+      mapLayerHint.style.display = "block";
+    }
+    if (mapHint) mapHint.textContent = `Active command: ${uav.pending_command}. Send CLEAR first to set a new destination.`;
+  } else {
+    if (mapLayerHint) mapLayerHint.style.display = "none";
+    if (mapHint) mapHint.textContent = "Click the map to set the destination, or type coordinates directly.";
+  }
+
   // Place/update the UAV marker on the map if it has a GPS fix
   if (latest && latest.latitude != null && latest.longitude != null) {
     const latlng = [latest.latitude, latest.longitude];
@@ -168,6 +229,22 @@ function renderUavState(uav) {
       uavMarker = L.marker(latlng, { icon: droneIcon() }).addTo(map).bindPopup(uav.name || uav.uav_id);
       map.setView(latlng, 14);
     }
+  }
+
+  // Update the dynamic Home Base marker to where this UAV first started
+  if (uav.home_lat != null && uav.home_lon != null) {
+    const homeLatLng = [uav.home_lat, uav.home_lon];
+    if (homeMarker) {
+      homeMarker.setLatLng(homeLatLng);
+      homeMarker.getPopup().setContent(`Home Base (${uav.name || uav.uav_id})`);
+    } else {
+      homeMarker = L.marker(homeLatLng, { icon: baseIcon() })
+        .addTo(map)
+        .bindPopup(`Home Base (${uav.name || uav.uav_id})`);
+    }
+  } else if (homeMarker) {
+    map.removeLayer(homeMarker);
+    homeMarker = null;
   }
 }
 
@@ -199,13 +276,30 @@ function updateFormMode() {
   const cmd = document.getElementById("commandSelect").value;
   document.getElementById("latlonFields").style.display = cmd === "GOTO" ? "grid" : "none";
   document.getElementById("mapHint").style.display = cmd === "GOTO" ? "block" : "none";
+  // Persist the chosen command type across navigation
+  sessionStorage.setItem("cmd_command", cmd);
+}
+
+function setCommandLock(locked) {
+  commandSending = locked;
+  document.getElementById("uavSelect").disabled = locked;
+  document.getElementById("commandSelect").disabled = locked;
+  document.getElementById("latInput").disabled = locked;
+  document.getElementById("lonInput").disabled = locked;
+  document.getElementById("sendBtn").disabled = locked;
+  // Visual cue on the map area
+  const mapWrap = document.querySelector(".cmd-map-wrap");
+  if (mapWrap) mapWrap.style.pointerEvents = locked ? "none" : "";
 }
 
 document.getElementById("commandSelect").addEventListener("change", updateFormMode);
 
 document.getElementById("uavSelect").addEventListener("change", (e) => {
+  if (commandSending) return; // block UAV switch while sending
   selectedUavId = e.target.value;
+  sessionStorage.setItem("cmd_selectedUavId", selectedUavId);
   if (uavMarker) { map.removeLayer(uavMarker); uavMarker = null; }
+  if (homeMarker) { map.removeLayer(homeMarker); homeMarker = null; }
   if (!selectedUavId) {
     document.getElementById("cmdEmpty").style.display = "block";
     document.getElementById("cmdContent").style.display = "none";
@@ -234,7 +328,7 @@ document.getElementById("cmdForm").addEventListener("submit", async (e) => {
     payload.lon = lon;
   }
 
-  sendBtn.disabled = true;
+  setCommandLock(true);
   sendBtn.textContent = "Sending…";
   try {
     await fetchJSON(`/api/uavs/${encodeURIComponent(selectedUavId)}/command`, {
@@ -242,16 +336,35 @@ document.getElementById("cmdForm").addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (command === "NONE") {
+      clearDestination();
+    }
     await refresh();
   } catch (err) {
     alert("Failed to send command: " + err.message);
   } finally {
-    sendBtn.disabled = false;
+    setCommandLock(false);
     sendBtn.textContent = "Send Command";
   }
 });
 
 initMap();
+
+// Restore persisted command type and coordinates after Home/Back navigation
+(function restoreFormState() {
+  const savedCmd = sessionStorage.getItem("cmd_command");
+  if (savedCmd) {
+    const sel = document.getElementById("commandSelect");
+    if ([...sel.options].some(o => o.value === savedCmd)) sel.value = savedCmd;
+  }
+  const savedLat = parseFloat(sessionStorage.getItem("cmd_lat"));
+  const savedLon = parseFloat(sessionStorage.getItem("cmd_lon"));
+  // Re-place the destination marker on the map so it survives navigation
+  if (!Number.isNaN(savedLat) && !Number.isNaN(savedLon)) {
+    setDestination(savedLat, savedLon);
+  }
+})();
+
 updateFormMode();
 refresh();
 setInterval(refresh, POLL_MS);

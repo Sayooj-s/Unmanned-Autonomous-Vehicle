@@ -9,11 +9,11 @@ function initMap() {
   map = L.map("map", { zoomControl: true, attributionControl: true })
     .setView([20.5937, 78.9629], 4); // neutral default view until real data arrives
 
-  // Dark basemap to match the dashboard theme
-  const darkLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
-    subdomains: "abcd",
+  // Dark basemap (OSM with CSS inversion to match theme without API keys)
+  const darkLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19,
+    className: 'dark-map-tiles'
   }).addTo(map);
 
   // Satellite / terrain layer (free, no API key)

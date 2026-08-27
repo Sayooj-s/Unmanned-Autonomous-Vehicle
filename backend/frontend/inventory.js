@@ -1,5 +1,6 @@
 const API_BASE = "";
 
+let selectedUavId = sessionStorage.getItem("inv_selectedUavId") || "ALL";
 let currentLookup = null; // { found, title, description, image_url, source_url }
 const lookupCache = new Map(); // query (lowercased) -> result, so retyping the same thing doesn't re-hit the API
 
@@ -18,75 +19,14 @@ function setLinkStatus(online) {
   if (online) {
     dot.classList.remove("offline");
     label.classList.remove("offline");
-    label.textContent = "ARMED";
+    label.textContent = "CONNECTED";
   } else {
     dot.classList.add("offline");
     label.classList.add("offline");
-    label.textContent = "DISARMED";
+    label.textContent = "OFFLINE";
   }
 }
 
-// ---------- Live lookup while typing ----------
-
-function resetLookupUI() {
-  currentLookup = null;
-  document.getElementById("lookupPreview").style.display = "none";
-  document.getElementById("addBtn").disabled = document.getElementById("componentInput").value.trim() === "";
-}
-
-async function runLookup(query) {
-  const statusEl = document.getElementById("lookupStatus");
-  statusEl.textContent = "Searching the web…";
-  statusEl.className = "lookup-status searching";
-
-  try {
-    const result = await fetchJSON("/api/inventory/lookup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-
-    // Ignore stale responses if the input has changed since this request started
-    if (document.getElementById("componentInput").value.trim() !== query) return;
-
-    currentLookup = result;
-    document.getElementById("addBtn").disabled = false;
-
-    if (result.found) {
-      statusEl.textContent = "";
-      statusEl.className = "lookup-status";
-      const preview = document.getElementById("lookupPreview");
-      preview.style.display = "flex";
-      const img = document.getElementById("lookupImg");
-      if (result.image_url) {
-        img.src = result.image_url;
-        img.style.display = "block";
-      } else {
-        img.style.display = "none";
-      }
-      document.getElementById("lookupTitle").textContent = result.title || query;
-      document.getElementById("lookupDesc").textContent = result.description || "";
-      const sourceLink = document.getElementById("lookupSource");
-      if (result.source_url) {
-        sourceLink.href = result.source_url;
-        sourceLink.style.display = "inline";
-      } else {
-        sourceLink.style.display = "none";
-      }
-    } else {
-      document.getElementById("lookupPreview").style.display = "none";
-      statusEl.textContent = result.error
-        ? "Couldn't reach the web lookup — you can still add this manually."
-        : "No match found — you can still add this with just the typed name.";
-      statusEl.className = "lookup-status notfound";
-    }
-  } catch (e) {
-    statusEl.textContent = "Lookup failed — you can still add this manually.";
-    statusEl.className = "lookup-status notfound";
-    currentLookup = null;
-    document.getElementById("addBtn").disabled = document.getElementById("componentInput").value.trim() === "";
-  }
-}
 
 // ---------- Search on demand (button / Enter) ----------
 
@@ -217,6 +157,9 @@ document.getElementById("addBtn").addEventListener("click", async () => {
   const hasManualDetails = manualTitle || manualImage || manualDesc || manualSource;
 
   const payload = { query, quantity: qty };
+  if (selectedUavId && selectedUavId !== "ALL") {
+    payload.uav_id = selectedUavId;
+  }
 
   if (hasManualDetails) {
     // Manual entries take priority over anything the web lookup found.
@@ -326,10 +269,29 @@ async function removeItem(id) {
 
 async function refreshInventory() {
   try {
+    let url = "/api/inventory";
+    if (selectedUavId && selectedUavId !== "ALL") {
+      url += "?uav_id=" + encodeURIComponent(selectedUavId);
+    }
     const [items, uavs] = await Promise.all([
-      fetchJSON("/api/inventory"),
+      fetchJSON(url),
       fetchJSON("/api/uavs").catch(() => []),
     ]);
+
+    const select = document.getElementById("uavSelect");
+    if (select) {
+      select.innerHTML = `<option value="ALL">All Unassigned / Global</option>`;
+      if (Array.isArray(uavs)) {
+        uavs.forEach(u => {
+          const opt = document.createElement("option");
+          opt.value = u.uav_id;
+          opt.textContent = u.name || u.uav_id;
+          select.appendChild(opt);
+        });
+      }
+      select.value = selectedUavId;
+    }
+
     const hasActiveUav = Array.isArray(uavs) && uavs.some(u => u.is_active);
     setLinkStatus(hasActiveUav);
     renderInventory(items);
@@ -338,6 +300,12 @@ async function refreshInventory() {
     setLinkStatus(false);
   }
 }
+
+document.getElementById("uavSelect").addEventListener("change", (e) => {
+  selectedUavId = e.target.value;
+  sessionStorage.setItem("inv_selectedUavId", selectedUavId);
+  refreshInventory();
+});
 
 resetLookupUI();
 refreshInventory();

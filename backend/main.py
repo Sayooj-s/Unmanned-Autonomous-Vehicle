@@ -84,6 +84,7 @@ class InventoryItem(Base):
     source_url = Column(String, nullable=True)
     quantity = Column(Integer, default=1)
     added_at = Column(DateTime, default=datetime.utcnow)
+    uav_id = Column(String, ForeignKey("uavs.uav_id"), nullable=True)
 
 
 class Telemetry(Base):
@@ -314,6 +315,7 @@ class InventoryAddIn(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     source_url: Optional[str] = None
+    uav_id: Optional[str] = None
 
 
 class InventoryUpdateIn(BaseModel):
@@ -465,6 +467,7 @@ def serialize_inventory(i: InventoryItem) -> dict:
         "source_url": i.source_url,
         "quantity": i.quantity,
         "added_at": i.added_at.isoformat() if i.added_at else None,
+        "uav_id": i.uav_id,
     }
 
 
@@ -498,8 +501,17 @@ def list_uavs(db: Session = Depends(get_db)):
             .order_by(Telemetry.timestamp.desc())
             .first()
         )
+        first_gps = (
+            db.query(Telemetry)
+            .filter(Telemetry.uav_id == u.uav_id, Telemetry.latitude.is_not(None), Telemetry.longitude.is_not(None))
+            .order_by(Telemetry.timestamp.asc())
+            .first()
+        )
         entry = serialize_uav(u)
         entry["latest"] = serialize_telemetry(latest) if latest else None
+        if first_gps:
+            entry["home_lat"] = first_gps.latitude
+            entry["home_lon"] = first_gps.longitude
         entry["alert"] = evaluate_alert(latest)
         # UAV is actively connected if it sent a reading within the last 10 seconds
         entry["is_active"] = bool(
@@ -816,8 +828,14 @@ def inventory_lookup(payload: InventoryLookupIn):
 
 
 @app.get("/api/inventory")
-def list_inventory(db: Session = Depends(get_db)):
-    items = db.query(InventoryItem).order_by(InventoryItem.added_at.desc()).all()
+def list_inventory(uav_id: Optional[str] = None, db: Session = Depends(get_db)):
+    q = db.query(InventoryItem)
+    if uav_id:
+        q = q.filter(InventoryItem.uav_id == uav_id)
+    else:
+        # If no uav_id is provided, you might want to return global unassigned inventory
+        q = q.filter(InventoryItem.uav_id.is_(None))
+    items = q.order_by(InventoryItem.added_at.desc()).all()
     return [serialize_inventory(i) for i in items]
 
 
@@ -836,6 +854,7 @@ def add_inventory(payload: InventoryAddIn, db: Session = Depends(get_db)):
         image_url=payload.image_url or data.get("image_url"),
         source_url=payload.source_url or data.get("source_url"),
         quantity=payload.quantity if payload.quantity is not None else 1,
+        uav_id=payload.uav_id,
     )
     db.add(item)
     db.commit()

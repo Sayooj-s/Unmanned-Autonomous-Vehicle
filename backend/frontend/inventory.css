@@ -117,6 +117,29 @@ body {
 
 .field-input:focus { border-color: var(--accent-dim); }
 
+.field-select {
+  width: 100%;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7680' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  transition: border-color 0.15s;
+}
+
+.field-select:focus { border-color: var(--accent-dim); }
+.field-select:hover { border-color: var(--accent-dim); }
+
 .search-row {
   display: flex;
   gap: 8px;
