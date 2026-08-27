@@ -9,24 +9,27 @@ function initMap() {
   map = L.map("map", { zoomControl: true, attributionControl: true })
     .setView([20.5937, 78.9629], 4); // neutral default view until real data arrives
 
-  // Dark basemap (OSM with CSS inversion to match theme without API keys)
-  const darkLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 19,
-    className: 'dark-map-tiles'
-  }).addTo(map);
+  // CartoDB Dark Matter — professional dark basemap, no API key needed
+  const darkLayer = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20,
+    }
+  ).addTo(map);
 
-  // Satellite / terrain layer (free, no API key)
+  // Esri World Imagery (satellite), free, no API key
   const satelliteLayer = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
-      attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics",
       maxZoom: 18,
-      maxNativeZoom: 17,  // Esri caps free access here — prevents the 'API required' overlay
+      maxNativeZoom: 17,
     }
   );
 
-  // Optional place-name/road labels to overlay on top of the satellite imagery
+  // Road/place-name labels overlay on top of satellite
   const satelliteLabels = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
     { maxZoom: 18, maxNativeZoom: 17, pane: "shadowPane" }
