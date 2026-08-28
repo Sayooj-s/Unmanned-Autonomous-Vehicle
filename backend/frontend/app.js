@@ -1,4 +1,4 @@
-const API_BASE = ""; // same origin (backend serves this frontend)
+const API_BASE = window.API_BASE || ""; // same origin (backend serves this frontend)
 const POLL_MS = 3000;
 
 let selectedUavId = null;

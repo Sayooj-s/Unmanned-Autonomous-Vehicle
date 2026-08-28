@@ -1,4 +1,4 @@
-const API_BASE = "";
+const API_BASE = window.API_BASE || "";
 
 let flightsCache = [];
 

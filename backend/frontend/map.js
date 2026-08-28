@@ -1,4 +1,4 @@
-const API_BASE = "";
+const API_BASE = window.API_BASE || "";
 const POLL_MS = 3000;
 
 let map;

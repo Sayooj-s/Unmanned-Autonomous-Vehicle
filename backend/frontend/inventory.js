@@ -1,4 +1,4 @@
-const API_BASE = "";
+const API_BASE = window.API_BASE || "";
 
 let selectedUavId = sessionStorage.getItem("inv_selectedUavId") || "ALL";
 let currentLookup = null; // { found, title, description, image_url, source_url }

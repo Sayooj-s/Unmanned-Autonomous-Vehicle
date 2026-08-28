@@ -8,7 +8,7 @@
  * the ground point since browser maps are 2.5D, not a true 3D engine.
  */
 
-const API_BASE = "";
+const API_BASE = window.API_BASE || "";
 const FLEET_POLL_MS = 3000;
 const TWIN_POLL_MS = 1500;
 const TRAIL_LIMIT = 60;
