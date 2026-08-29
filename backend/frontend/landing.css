@@ -119,6 +119,67 @@ body {
   opacity: 0.75;
 }
 
+.link-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid var(--border, #333);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.logout-btn:hover {
+  border-color: var(--red, #f44336);
+  color: var(--red, #f44336);
+}
+
+/* Sign In / Sign Up buttons shown when not logged in */
+.landing-auth-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.landing-auth-btn:hover {
+  border-color: rgba(255,255,255,0.4);
+  color: var(--text);
+}
+
+.landing-auth-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+
+.landing-auth-btn--primary:hover {
+  filter: brightness(1.15);
+  color: #000;
+}
+
+
 .topbar-status {
   display: flex;
   align-items: center;

@@ -21,11 +21,12 @@
   <!-- Topbar floats above both sections -->
   <header class="topbar">
     <div class="brand">
-      <a href="#modules" class="brand-home-link">
+      <a href="#hero" class="brand-home-link">
         <span class="brand-mark">◈</span>
         <span class="brand-text">UAV GROUND CONTROL</span>
       </a>
     </div>
+    <div class="link-status" id="linkStatus"></div>
   </header>
 
   <!-- ═══ SECTION 1: Full-screen drone hero ═══ -->
@@ -109,12 +110,22 @@
 
   </section>
 
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script>landingInit();</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="drone-bg.js"></script>
   <script>
     // Scroll cue — smooth scroll to modules section
     document.getElementById('scroll-cue').addEventListener('click', () => {
       document.getElementById('modules').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // Home button smooth scroll
+    document.querySelector('.brand-home-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('hero').scrollIntoView({ behavior: 'smooth' });
+      history.pushState(null, null, '#hero');
     });
 
     // Auto-scroll to #modules when returning from a module page

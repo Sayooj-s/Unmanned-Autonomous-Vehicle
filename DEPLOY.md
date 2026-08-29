@@ -29,12 +29,21 @@ and the `window.API_BASE` changes in each page's JS are for.
 4. Deploy. Render gives you a URL like `https://uav-backend.onrender.com`
    — copy it.
 
-Optional but recommended — add a database instead of relying on SQLite:
+Optional but recommended — add a database instead of relying on SQLite.
+Render's own free Postgres works, but it hard-deletes itself after 90 days
+regardless of usage. For a fleet system meant to run continuously,
+**Supabase** is the better free option — no expiry, and its 7-day-idle
+pause never triggers here since your UAVs are posting telemetry every few
+seconds, which keeps it awake.
 
-5. **New +** → **PostgreSQL** → Free tier → create it.
-6. Copy its **Internal Database URL**.
-7. Back on your web service → **Environment** → add `DATABASE_URL` = that
-   connection string → save (this redeploys automatically).
+5. Create a project at [supabase.com](https://supabase.com) (no card
+   required) and set a database password when prompted.
+6. Project Settings → Database → Connection string → **Connection
+   pooling** tab (not the direct connection — the pooler handles external
+   connections from Render far more reliably) → copy the URI and fill in
+   your real password in place of `[YOUR-PASSWORD]`.
+7. Back on your Render web service → **Environment** → add `DATABASE_URL`
+   = that connection string → save (this redeploys automatically).
 
 ## 2. Point the frontend at that backend
 

@@ -17,14 +17,17 @@ import csv
 import io
 import math
 import time
-from datetime import datetime
+import bcrypt
+import jwt
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 
@@ -47,10 +50,30 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# Secret used to sign login sessions (JWTs). Set a real JWT_SECRET env var in
+# production -- this default is fine for local dev only, and anyone who can
+# read it could forge login tokens.
+JWT_SECRET = os.environ.get("JWT_SECRET", "dev-insecure-secret-change-me")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRES_DAYS = 7
+
 
 # ---------------------------------------------------------------------------
 # Database models
 # ---------------------------------------------------------------------------
+
+class User(Base):
+    """A dashboard operator account -- separate from the UAVs themselves.
+    Telemetry ingestion (from simulate_uav.py / the Jetson bridge) stays
+    unauthenticated so drones can keep reporting in without needing a login;
+    this only gates the human-facing dashboard and command sending."""
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=True)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class UAV(Base):
     __tablename__ = "uavs"
@@ -271,6 +294,51 @@ def get_db():
 
 
 # ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+    except ValueError:
+        return False
+
+
+def create_access_token(user: "User") -> str:
+    payload = {
+        "sub": str(user.id),
+        "email": user.email,
+        "exp": datetime.utcnow() + timedelta(days=JWT_EXPIRES_DAYS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+    db: Session = Depends(get_db),
+) -> "User":
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = int(payload.get("sub"))
+    except (jwt.PyJWTError, TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return user
+
+
+# ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
 
@@ -293,6 +361,29 @@ class UAVRegister(BaseModel):
     uav_id: str
     name: Optional[str] = None
     model: Optional[str] = None
+
+
+class SignupIn(BaseModel):
+    email: EmailStr
+    password: str
+    name: Optional[str] = None
+
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserOut(BaseModel):
+    id: int
+    email: str
+    name: Optional[str] = None
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
 
 
 class CommandIn(BaseModel):
@@ -339,6 +430,44 @@ class TelemetryIn(BaseModel):
 
 class FlightStartIn(BaseModel):
     label: Optional[str] = None
+
+
+
+# ---------------------------------------------------------------------------
+# Auth endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/api/auth/signup", response_model=TokenOut)
+def signup(payload: SignupIn, db: Session = Depends(get_db)):
+    email = payload.email.lower().strip()
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code=409, detail="An account with that email already exists")
+
+    user = User(email=email, name=payload.name, hashed_password=hash_password(payload.password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token(user)
+    return {"access_token": token, "user": {"id": user.id, "email": user.email, "name": user.name}}
+
+
+@app.post("/api/auth/login", response_model=TokenOut)
+def login(payload: LoginIn, db: Session = Depends(get_db)):
+    email = payload.email.lower().strip()
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    token = create_access_token(user)
+    return {"access_token": token, "user": {"id": user.id, "email": user.email, "name": user.name}}
+
+
+@app.get("/api/auth/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return {"id": current_user.id, "email": current_user.email, "name": current_user.name}
 
 
 def haversine_distance_m(lat1, lon1, lat2, lon2) -> float:
@@ -783,9 +912,16 @@ def get_command(uav_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/uavs/{uav_id}/command")
-def set_command(uav_id: str, payload: CommandIn, db: Session = Depends(get_db)):
+def set_command(
+    uav_id: str,
+    payload: CommandIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Set manually -- e.g. from the Commanding card on the dashboard, or to
-    clear a command back to NONE once the companion computer has acted on it."""
+    clear a command back to NONE once the companion computer has acted on it.
+    Requires a logged-in operator -- telemetry ingestion from the UAVs
+    themselves is unaffected and stays open."""
     if payload.command not in ("NONE", "RTL", "HOLD", "GOTO"):
         raise HTTPException(status_code=400, detail="command must be NONE, RTL, HOLD, or GOTO")
     if payload.command == "GOTO" and (payload.lat is None or payload.lon is None):

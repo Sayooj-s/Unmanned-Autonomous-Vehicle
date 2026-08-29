@@ -142,6 +142,8 @@ function clearDestination() {
 }
 
 async function fetchJSON(path, opts) {
+  opts = opts || {};
+  opts.headers = { ...(opts.headers || {}), ...authHeaders() };
   const res = await fetch(API_BASE + path, opts);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
