@@ -112,6 +112,16 @@ async function landingInit() {
       statusEl.appendChild(sep);
       statusEl.appendChild(signUpBtn);
     }
+
+    // Intercept card clicks to prevent double-redirect lag
+    document.querySelectorAll('.nav-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        const dest = encodeURIComponent(card.getAttribute('href') || "index.html");
+        window.location.href = `login.html?next=${dest}`;
+      });
+    });
+
     return;
   }
 
