@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+uav_data.db
+venv/
+.venv/
+*.log

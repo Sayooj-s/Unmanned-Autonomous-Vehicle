@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAV Ground Control</title>
+  <meta name="description" content="Unmanned Aerial Vehicle Ground Control Interface — fleet management, live map, commanding, and flight logs.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="landing.css" />
+</head>
+
+<body>
+
+  <!-- Fixed 3D drone canvas — only visible in hero section -->
+  <canvas id="drone-bg"></canvas>
+
+  <!-- Topbar floats above both sections -->
+  <header class="topbar">
+    <div class="brand">
+      <a href="#hero" class="brand-home-link">
+        <span class="brand-mark">◈</span>
+        <span class="brand-text">UAV GROUND CONTROL</span>
+      </a>
+    </div>
+    <div class="link-status" id="linkStatus"></div>
+  </header>
+
+  <!-- ═══ SECTION 1: Full-screen drone hero ═══ -->
+  <section class="hero-section" id="hero">
+    <div class="hero-vignette"></div>
+    <div class="hero-glow"></div>
+
+    <div class="hero-content">
+      <div class="hero-eyebrow">
+        <span class="eyebrow-pulse"></span>
+        UNMANNED AERIAL SYSTEMS · OPERATIONS CENTER
+      </div>
+
+      <h1 class="hero-title">
+        Ground<br><span class="hero-accent">Control</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Unified telemetry, commanding, and fleet intelligence<br>
+        for autonomous UAV operations at scale.
+      </p>
+
+
+    </div>
+
+    <!-- Animated scroll cue -->
+    <button class="scroll-cue" id="scroll-cue" aria-label="Scroll to modules">
+      <span class="scroll-cue-label">EXPLORE MODULES</span>
+      <div class="scroll-cue-chevron">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M3 6l6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </button>
+
+    <!-- HUD corner brackets -->
+    <div class="hud-corner hud-tl"></div>
+    <div class="hud-corner hud-tr"></div>
+    <div class="hud-corner hud-bl"></div>
+    <div class="hud-corner hud-br"></div>
+  </section>
+
+  <!-- ═══ SECTION 2: Navigation cards ═══ -->
+  <section class="nav-section" id="modules">
+
+    <div class="nav-section-header">
+      <div class="nav-eyebrow">SELECT MODULE</div>
+      <h2 class="nav-title">Mission Control</h2>
+      <div class="nav-line"></div>
+    </div>
+
+    <div class="card-grid">
+
+      <a class="nav-card card-fleet" href="fleet.html">
+        <div class="nav-card-title">Fleet Management</div>
+      </a>
+
+      <a class="nav-card card-map" href="map.html">
+        <div class="nav-card-title">Live Map</div>
+      </a>
+
+      <a class="nav-card card-command" href="command.html">
+        <div class="nav-card-title">Commanding</div>
+      </a>
+
+      <a class="nav-card card-inventory" href="inventory.html">
+        <div class="nav-card-title">Inventory</div>
+      </a>
+
+      <a class="nav-card card-logs" href="flights.html">
+        <div class="nav-card-title">Flight Logs</div>
+      </a>
+
+      <a class="nav-card card-twin" href="digital-twin.html">
+        <div class="nav-card-title">Digital Twin</div>
+      </a>
+
+    </div>
+
+
+
+  </section>
+
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script>landingInit();</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="drone-bg.js"></script>
+  <script>
+    // Scroll cue — smooth scroll to modules section
+    document.getElementById('scroll-cue').addEventListener('click', () => {
+      document.getElementById('modules').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // Home button smooth scroll
+    document.querySelector('.brand-home-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('hero').scrollIntoView({ behavior: 'smooth' });
+      history.pushState(null, null, '#hero');
+    });
+
+    // Auto-scroll to #modules when returning from a module page
+    if (window.location.hash === '#modules') {
+      // Small delay lets the browser/drone canvas finish initial paint
+      setTimeout(() => {
+        document.getElementById('modules').scrollIntoView({ behavior: 'smooth' });
+      }, 120);
+    }
+
+    // Staggered card entrance animation on scroll
+    const cards = document.querySelectorAll('.nav-card');
+    const cardObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          // slight stagger per card index
+          const idx = Array.from(cards).indexOf(entry.target);
+          entry.target.style.transitionDelay = `${idx * 100}ms`;
+          entry.target.classList.add('card-visible');
+          cardObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    cards.forEach(c => cardObserver.observe(c));
+  </script>
+
+</body>
+
+</html>

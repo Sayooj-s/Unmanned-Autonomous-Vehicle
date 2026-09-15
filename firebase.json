@@ -1,0 +1,6 @@
+{
+  "hosting": {
+    "public": "uav-telemetry/backend/frontend",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  }
+}

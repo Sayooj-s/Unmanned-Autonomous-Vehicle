@@ -1,0 +1,218 @@
+/* ---------- Twin panel (mirrors .detail-panel from style.css) ---------- */
+
+.twin-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.twin-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.twin-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.twin-heading h1 {
+  font-family: var(--mono);
+  font-size: 22px;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.btn-follow {
+  background: rgba(57, 255, 136, 0.08);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-follow:hover {
+  background: rgba(57, 255, 136, 0.14);
+}
+
+.btn-follow.off {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+/* ---------- 3D map stage ---------- */
+
+.twin-stage-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0a0d10;
+}
+
+#twin3dMap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Keep MapLibre's own UI (zoom/compass, attribution) legible against the
+   dashboard's dark theme without fighting its default styling too much. */
+.maplibregl-ctrl-attrib {
+  background: rgba(10, 13, 16, 0.6) !important;
+  color: #a7b0b8 !important;
+}
+.maplibregl-ctrl-attrib a { color: #d6ecff !important; }
+
+.no-gps-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 13px;
+  background: rgba(10, 13, 16, 0.72);
+}
+
+/* ---------- Drone marker: lifted + tethered to its ground point ---------- */
+
+.drone3d-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.drone3d-tether {
+  width: 1px;
+  background: linear-gradient(180deg, rgba(94,200,216,0.1), rgba(94,200,216,0.7));
+  transition: height 0.35s ease;
+}
+
+.drone3d-icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: -17px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+}
+
+.drone3d-icon .drone-arm { stroke: #050608; stroke-width: 3; }
+.drone3d-icon .drone-rotor { fill: rgba(94,200,216,0.25); stroke: var(--cyan); stroke-width: 1.4; }
+.drone3d-icon .drone-body { fill: #0a0c10; stroke: var(--accent); stroke-width: 1.6; }
+.drone3d-icon.crit .drone-body { stroke: var(--red); }
+.drone3d-icon.crit .drone-rotor { stroke: var(--red); }
+.drone3d-icon.warn .drone-body { stroke: var(--amber); }
+.drone3d-icon.warn .drone-rotor { stroke: var(--amber); }
+
+.drone3d-shadow {
+  width: 20px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  filter: blur(1px);
+}
+
+/* ---------- Home point marker ---------- */
+
+.home-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(94, 200, 216, 0.15);
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 0 4px rgba(94, 200, 216, 0.12);
+}
+
+/* ---------- HUD chips (reused visual language from the fleet stat cards) --- */
+
+.twin-hud {
+  position: absolute;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.twin-hud-left { left: 16px; }
+.twin-hud-right { right: 16px; }
+
+.hud-chip {
+  background: rgba(10, 13, 16, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  min-width: 108px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hud-chip-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.hud-chip-value {
+  display: block;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hud-chip[data-metric="soc"].warn .hud-chip-value,
+.hud-chip[data-metric="temp"].warn .hud-chip-value,
+.hud-chip[data-metric="vib"].warn .hud-chip-value { color: var(--amber); }
+
+.hud-chip[data-metric="soc"].crit .hud-chip-value,
+.hud-chip[data-metric="temp"].crit .hud-chip-value,
+.hud-chip[data-metric="vib"].crit .hud-chip-value { color: var(--red); }
+
+.twin-footnote {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  right: 16px;
+  z-index: 2;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+
+@media (max-width: 760px) {
+  .twin-hud {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 10px;
+  }
+  .twin-hud-left, .twin-hud-right { left: auto; right: auto; }
+  .hud-chip { min-width: 92px; }
+}

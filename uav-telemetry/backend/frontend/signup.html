@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Account — UAV Ground Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◈</span>
+      <span class="brand-text">UAV GROUND CONTROL</span>
+    </div>
+  </header>
+
+  <main class="auth-wrap">
+    <form class="auth-card" id="signupForm">
+      <h1>Create account</h1>
+      <p class="auth-sub">Set up operator access to the fleet dashboard.</p>
+
+      <label class="auth-label" for="name">Name</label>
+      <input class="auth-input" type="text" id="name" autocomplete="name" />
+
+      <label class="auth-label" for="email">Email</label>
+      <input class="auth-input" type="email" id="email" required autocomplete="email" />
+
+      <label class="auth-label" for="password">Password</label>
+      <input class="auth-input" type="password" id="password" required minlength="8" autocomplete="new-password" />
+      <p class="auth-hint">At least 8 characters.</p>
+
+      <div class="auth-error" id="authError" style="display:none;"></div>
+
+      <button class="auth-submit" type="submit" id="submitBtn">Create account</button>
+
+      <p class="auth-switch">Already have an account? <a href="login.html">Sign in</a></p>
+    </form>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    document.getElementById("signupForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById("authError");
+      const submitBtn = document.getElementById("submitBtn");
+      errorEl.style.display = "none";
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating account…";
+
+      try {
+        const res = await fetch((window.API_BASE || "") + "/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: document.getElementById("name").value.trim() || null,
+            email: document.getElementById("email").value.trim(),
+            password: document.getElementById("password").value,
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.detail || "Sign up failed");
+
+        setAuthToken(body.access_token);
+        window.location.href = "index.html";
+      } catch (err) {
+        errorEl.textContent = err.message || "Something went wrong";
+        errorEl.style.display = "block";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Create account";
+      }
+    });
+  </script>
+</body>
+
+</html>
